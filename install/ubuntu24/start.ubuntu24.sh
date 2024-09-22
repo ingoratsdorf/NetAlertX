@@ -10,7 +10,7 @@
 
 
 echo "---------------------------------------------------------"
-echo "[INSTALL STAGE 2]              Run install_s2.ubuntu24.sh"
+echo "[INSTALL]                      Run install_s2.ubuntu24.sh"
 echo "---------------------------------------------------------"
 
 
@@ -20,7 +20,7 @@ CONFIG_FILE=app.conf
 DB_FILE=app.db
 NGINX_CONFIG_FILE=netalertx.ubuntu24.conf
 WEB_UI_DIR=/var/www/html/netalertx
-NGINX_CONFIG_FILE=/etc/nginx/conf.d/${NGINX_CONFIG_FILE}
+NGINX_CONFIG_LINK=/etc/nginx/conf.d/${NGINX_CONFIG_LINK}
 OUI_FILE="/usr/share/arp-scan/ieee-oui.txt" # Define the path to ieee-oui.txt and ieee-iab.txt
 FILEDB=${BASE_DIR}/db/${DB_FILE}
 # DO NOT CHANGE ANYTHING ABOVE THIS LINE!
@@ -74,29 +74,29 @@ if [ -d ${WEB_UI_DIR} ]; then
 fi
 
 # Ubuntu24 (at least) return false for -e, -f, or -d. Only -L works
-if [ -L ${NGINX_CONFIG_FILE} ]; then
+if [ -L ${NGINX_CONFIG_LINK} ]; then
   echo "[INSTALL] Removing existing NetAlertX NGINX config"
-  sudo rm ${NGINX_CONFIG_FILE}
+  sudo rm ${NGINX_CONFIG_LINK}
 fi
 
 # create symbolic link to the install directory
-echo "[INSTALL] Setting up web UI directory to server from"
+echo "[INSTALL] Setting up web UI directory to serve from"
 ln -s ${BASE_DIR}/front ${WEB_UI_DIR}
 
 # create symbolic link to NGINX configuaration coming with NetAlertX
 echo "[INSTALL] Registering NetAlextX server config with NGINX"
-sudo ln -s ${BASE_DIR}/install/ubuntu24/${NGINX_CONFIG_FILE} ${NGINX_CONFIG_FILE}
+sudo ln -s ${BASE_DIR}/install/ubuntu24/${NGINX_CONFIG_FILE} ${NGINX_CONFIG_LINK}
 
 # Use user-supplied port if set
 if [ -n "${PORT}" ]; then
   echo "[INSTALL] Setting webserver to user-supplied port (${PORT})"
-  sudo sed -i 's/listen 20211/listen '"${PORT}"'/g' ${NGINX_CONFIG_FILE}
+  sudo sed -i 's/listen 20211/listen '"${PORT}"'/g' ${NGINX_CONFIG_LINK}
 fi
 
 # Change web interface address if set
 if [ -n "${LISTEN_ADDR}" ]; then
   echo "[INSTALL] Setting webserver to user-supplied address (${LISTEN_ADDR})"
-  sed -ie 's/listen /listen '"${LISTEN_ADDR}":'/g' ${NGINX_CONFIG_FILE}
+  sed -ie 's/listen /listen '"${LISTEN_ADDR}":'/g' ${NGINX_CONFIG_LINK}
 fi
 
 # Run the hardware vendors update at least once

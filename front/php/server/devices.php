@@ -50,6 +50,7 @@
       case 'getDevices':              getDevices();                            break;
       case 'copyFromDevice':          copyFromDevice();                        break;
       case 'wakeonlan':               wakeonlan();                             break;
+      case 'registerDeviceSessions':  registerDeviceSessions();                break;
 
       default:                        logServerConsole ('Action: '. $action);  break;
     }
@@ -173,6 +174,38 @@ function setDeviceData() {
   }
 }
 
+//------------------------------------------------------------------------------
+//  Register new devices in session and events table
+//------------------------------------------------------------------------------
+function registerDeviceSessions() {
+  global $db;
+
+  $mysqltime = date('Y-m-d H:i:s');
+
+  // get all devices that were/are online
+  $sql = 'SELECT dev_MAC FROM Devices WHERE dev_PresentLastScan=1';
+  // execute sql
+  $result = $db->query($sql);
+  foreach ($result as $mac) {
+    $count = (int)$db->querySingle('SELECT COUNT(*) FROM Sessions WHERE ses_MAC="' . $mac . '"');
+    if ($count == 0) {
+      logServerConsole ('registerDeviceSessions: '. $mac);
+      // add connection event
+      $sql = 'INSERT INTO Events (eve_MAC, eve_IP,
+                eve_DateTime, eve_EventType, eve_AdditionalInfo, eve_PendingAlertEmail)
+                SELECT cur_MAC, cur_IP, '.$mysqltime.', "Connected", cur_Vendor, 0
+                FROM CurrentScan WHERE cur_MAC="'. $mac . '"';
+      $db->query($sql);
+
+      // add session start
+      $sql = 'INSERT INTO Sessions (ses_MAC, ses_IP,
+                ses_EventTypeConnection, ses_DateTimeConnection, ses_EventTypeDisconnection, ses_DateTimeDisconnection, ses_StillConnected, ses_AdditionalInfo)
+                SELECT cur_MAC, cur_IP,"Connected","'.$mysqltime.'", NULL , NULL ,1, cur_Vendor
+                FROM CurrentScan WHERE cur_MAC="'. $mac . '"';
+      $db->query($sql);
+    }
+  }
+}
 
 //------------------------------------------------------------------------------
 //  Delete Device

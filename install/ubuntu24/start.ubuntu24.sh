@@ -20,7 +20,7 @@ CONFIG_FILE=app.conf
 DB_FILE=app.db
 NGINX_CONFIG_FILE=netalertx.ubuntu24.conf
 WEB_UI_DIR=/var/www/html/netalertx
-NGINX_CONFIG_LINK=/etc/nginx/conf.d/${NGINX_CONFIG_LINK}
+NGINX_CONFIG_LINK=/etc/nginx/conf.d/${NGINX_CONFIG_FILE}
 OUI_FILE="/usr/share/arp-scan/ieee-oui.txt" # Define the path to ieee-oui.txt and ieee-iab.txt
 FILEDB=${BASE_DIR}/db/${DB_FILE}
 # DO NOT CHANGE ANYTHING ABOVE THIS LINE!

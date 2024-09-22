@@ -13,7 +13,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Install dependencies
-apt-get install -y \
+apt install -y \
     tini snmp ca-certificates curl libwww-perl arp-scan perl apt-utils cron sudo \
     openssl sqlite3 dnsutils net-tools \
     nginx php8.3-fpm php8.3 mtr php-cli php8.3-sqlite3 php-sqlite3 php-cgi php-curl \
@@ -22,7 +22,7 @@ apt-get install -y \
 sudo phpenmod -v 8.3 sqlite3 
 
 # setup virtual python environment so we can use pip3 to install packages
-apt-get install python3-venv -y
+apt -y install python3-venv
 python3 -m venv ../myenv
 source ../myenv/bin/activate
 

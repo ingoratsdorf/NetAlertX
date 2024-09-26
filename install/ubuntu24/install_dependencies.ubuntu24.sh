@@ -15,7 +15,7 @@ fi
 # Install dependencies
 apt install -y \
     tini snmp ca-certificates curl libwww-perl arp-scan perl apt-utils cron sudo \
-    openssl sqlite3 dnsutils net-tools \
+    libssl-dev libffi-dev openssl sqlite3 dnsutils net-tools \
     nginx php8.3-fpm php8.3 mtr php-cli php8.3-sqlite3 php-sqlite3 php-cgi php-curl \
     python3 python3-dev iproute2 nmap python3-pip zip usbutils traceroute nbtscan build-essential
 

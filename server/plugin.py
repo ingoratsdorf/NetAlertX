@@ -226,12 +226,14 @@ def execute_plugin(db, all_plugins, plugin, pluginsState = plugins_state() ):
         file_dir = os.path.join(pluginsPath, plugin["code_name"])
         file_prefix = 'last_result'
 
-        # Decode files, rename them, and get the list of files
+        # Decode files, rename them, and get the list of files, this will return all files starting with the prefix, even if they are not encoded
         files_to_process = decode_and_rename_files(file_dir, file_prefix)
 
         for filename in files_to_process:
 
             full_path = os.path.join(file_dir, filename)
+            
+            mylog('debug', [f'[Plugins] Processing file "{full_path}"'])
 
             # Open the decrypted file and process its contents
             with open(full_path, 'r') as f:
@@ -248,7 +250,11 @@ def execute_plugin(db, all_plugins, plugin, pluginsState = plugins_state() ):
             
                 for line in newLines:
                     columns = line.split("|")
-                    # There have to be 9 or 13 columns
+                    # There have to be 9 or 13 columns 
+                    if len(columns) not in [9, 13]:
+                        mylog('none', [f'[Plugins] Wrong number of input values, must be 9 or 13, got {len(columns)} from: {line}'])
+                        continue  # Skip lines with incorrect number of columns
+                    
                     # Common part of the SQL parameters
                     base_params = [
                         0,                          # "Index" placeholder
@@ -284,8 +290,6 @@ def execute_plugin(db, all_plugins, plugin, pluginsState = plugins_state() ):
                             'null',   # "HelpVal3"
                             'null'    # "HelpVal4"
                         ])
-                    else:
-                        mylog('none', [f'[Plugins] Wrong number of input values, must be 9 or 13, got {len(columns)} from: {line} '])
                         
                     # Create a tuple containing values to be inserted into the database.
                     # Each value corresponds to a column in the table in the order of the columns.

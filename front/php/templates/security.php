@@ -1,67 +1,72 @@
 <?php
 
-$url = 'http://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
-$isLogonPage = FALSE;
+// Constants
+define('CONFIG_PATH', $_SERVER['DOCUMENT_ROOT'] . "/../config/app.conf");
+define('COOKIE_SAVE_LOGIN_NAME', "NetAlertX_SaveLogin");
 
-$CookieSaveLoginName = "NetAlertX_SaveLogin";
-
-
-if (strpos($url,'index.php') !== false) {
-    $isLogonPage = TRUE;
-} 
-
-session_start();
-
-if(array_search('action', $_REQUEST) != FALSE)
-{
-  if ($_REQUEST['action'] == 'logout') {
-    session_destroy();
-    setcookie($CookieSaveLoginName, "", time() - 3600);
-    header('Location: index.php');
-  }    
+// Utility Functions
+function getConfigLine($pattern, $config_lines) {
+    $matches = preg_grep($pattern, $config_lines);
+    return !empty($matches) ? explode("=", array_values($matches)[0]) : null;
 }
 
-// ##################################################
-// ## Login Processing start
-// ##################################################
-$config_file = "../config/app.conf";
-$config_file_lines = file($config_file);
-$CookieSaveLoginName = "NetAlertX_SaveLogin";
+function getConfigValue($pattern, $config_lines, $delimiter = "'") {
+    $line = preg_grep($pattern, $config_lines);
+    return !empty($line) ? explode($delimiter, array_values($line)[0])[1] : '';
+}
 
-// ###################################
-// ## SETPWD_enable_password FALSE
-// ###################################
+function redirect($url) {
+    header("Location: $url");
+    exit();
+}
 
-$config_file_lines_bypass = array_values(preg_grep('/^SETPWD_enable_password.*=/', $config_file_lines));
-$protection_line = explode("=", $config_file_lines_bypass[0]);
-$Pia_WebProtection = strtolower(trim($protection_line[1]));
+// Initialization
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+$url = $protocol . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+$isLogonPage = strpos($url, 'index.php') !== false;
+$authHeader = apache_request_headers()['Authorization'] ?? '';
+$sessionLogin = isset($_SESSION['login']) ? $_SESSION['login'] : 0;
 
-// ###################################
-// ## SETPWD_enable_password TRUE
-// ###################################
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
-$config_file_lines = array_values(preg_grep('/^SETPWD_password.*=/', $config_file_lines));
-$password_line = explode("'", $config_file_lines[0]);
-$Pia_Password = $password_line[1];
+// Handle logout
+if (!empty($_REQUEST['action']) && $_REQUEST['action'] == 'logout') {
+    session_destroy();
+    setcookie(COOKIE_SAVE_LOGIN_NAME, "", time() - 3600);
+    redirect('index.php');
+}
 
-// active Session or valid cookie (cookie not extends)
-if($Pia_WebProtection == 'true')
-{
-    if(isset ($_SESSION["login"]) == FALSE )
-    {
-        $_SESSION["login"] = 0;
-    }     
+// Load configuration
+if (!file_exists(CONFIG_PATH)) {
+    die("Configuration file not found.");
+}
+$configLines = file(CONFIG_PATH);
 
-    if ( ($_SESSION["login"] == 1) || $isLogonPage ||  (( isset($_COOKIE[$CookieSaveLoginName]) && $Pia_Password == $_COOKIE[$CookieSaveLoginName ])))
-    {
-        //Logged in or stay on this page if we are on the index.php already   
-        
-    } else 
-    {
+// Handle web protection and password
+$nax_WebProtection = strtolower(trim(getConfigLine('/^SETPWD_enable_password.*=/', $configLines)[1] ?? 'false'));
+$nax_Password = getConfigValue('/^SETPWD_password.*=/', $configLines);
+$api_token = getConfigValue('/^SYNC_api_token.*=/', $configLines, "'");
+
+$expectedToken = 'Bearer ' . $api_token;
+
+// Authentication Handling
+if ($nax_WebProtection == 'true') {
+    if ($authHeader === $expectedToken) {
+        $_SESSION['login'] = 1; // User authenticated with bearer token
+    } elseif (!empty($authHeader)) {
+        echo "[Security] Incorrect Bearer Token";
+    }
+
+    // Determine if the user should be redirected
+    if ($_SESSION["login"] == 1 || $isLogonPage || (isset($_COOKIE[COOKIE_SAVE_LOGIN_NAME]) && $nax_Password == $_COOKIE[COOKIE_SAVE_LOGIN_NAME])) {
+        // Logged in or stay on this page if we are on the index.php already   
+    } else {
         // we need to redirect        
-        header('Location: index.php');
-    } 
-
+        redirect('/index.php');
+    }
 }
 
 ?>

@@ -12,6 +12,10 @@
   require dirname(__FILE__).'/init.php';
 
   //------------------------------------------------------------------------------
+  // check if authenticated
+  require_once  $_SERVER['DOCUMENT_ROOT'] . '/php/templates/security.php';
+
+  //------------------------------------------------------------------------------
   //  Action selector
   //------------------------------------------------------------------------------
   // Set maximum execution time to 15 seconds
@@ -457,40 +461,38 @@ function ExportCSV() {
   $func_result = $db->query("SELECT * FROM Devices");        
 
   // prepare CSV header row
-  // header array with column names 
   $columns = getDevicesColumns();
 
   // wrap the headers with " (quotes) 
-  $resultCSV = '"'.implode('","', $columns).'"';  
-
-  //and append a new line
-  $resultCSV = $resultCSV."\n";
+  $resultCSV = '"'.implode('","', $columns).'"'."\n";
 
   // retrieve the devices from the DB
-  while ($row = $func_result -> fetchArray (SQLITE3_ASSOC)) {   
+  while ($row = $func_result->fetchArray(SQLITE3_ASSOC)) {   
 
     // loop through columns and add values to the string 
     $index = 0;
     foreach ($columns as $columnName) {
+      // Escape special chars (e.g.quotes) inside fields by replacing them with html definitions
+      $fieldValue = encodeSpecialChars($row[$columnName]);
 
       // add quotes around the value to prevent issues with commas in fields
-      $resultCSV = $resultCSV.'"'.$row[$columnName].'"';
+      $resultCSV .= '"'.$fieldValue.'"';
 
       // detect last loop - skip as no comma needed
-      if ($index != count($columns) - 1  )
-      {
-        $resultCSV = $resultCSV.',';
+      if ($index != count($columns) - 1) {
+        $resultCSV .= ',';
       }
       $index++;
     } 
 
-    //$resultCSV = $resultCSV.implode(",", [$row["dev_MAC"], $row["dev_Name"]]);
-    $resultCSV = $resultCSV."\n";
+    // add a new line for the next row
+    $resultCSV .= "\n";
   }
 
   //write the built CSV string
   echo $resultCSV;    
 }
+
 
 //------------------------------------------------------------------------------
 //  Import CSV of devices
@@ -507,7 +509,11 @@ function ImportCSV() {
   if(isset ($_POST['content']) && !empty ($_POST['content']))
   {
     // Decode the Base64 string
-    $data = base64_decode($_POST['content']);
+    // $data = base64_decode($_POST['content']);
+    $data = base64_decode($_POST['content'], true);  // The second parameter ensures safe decoding
+
+    // // Ensure the decoded data is treated as UTF-8 text
+    // $data = mb_convert_encoding($data, 'UTF-8', 'UTF-8');
 
   } else if (file_exists($file)) { // try to get the data form the file
 
@@ -519,6 +525,12 @@ function ImportCSV() {
 
   if($data != "")
   {
+    // data cleanup - new lines breaking the CSV
+    $data = preg_replace_callback('/"([^"]*)"/', function($matches) {
+      // Replace all \n within the quotes with a space
+      return str_replace("\n", " ", $matches[0]); // Replace with a space
+    }, $data);
+
     $lines = explode("\n", $data); 
 
     // Get the column headers from the first line of the CSV

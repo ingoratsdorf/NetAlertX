@@ -378,6 +378,7 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
         const valIn = set['Value'];
         const codeName = set['Code_Name'];
+        const overriddenByEnv = set['OverriddenByEnv'] == 1;
         const setType = set['Type'];
         const isMetadata = codeName.includes('__metadata');
         // is this isn't a metadata entry, get corresponding metadata object from the dummy setting
@@ -416,11 +417,11 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
                       <div class="table_cell setting_description">
                         ${getString(codeName + '_description', set['Description'])}
                       </div>
-                      <div class="table_cell input-group setting_input input-group col-sm-12">
+                      <div class="table_cell input-group setting_input ${overriddenByEnv ? "setting_overriden_by_env" : ""} input-group col-sm-12">
                   `;
 
           // OVERRIDE
-          // surface settings override functionality if the setting is a template that can be overriden with user defined values
+          // surface settings override functionality if the setting is a template that can be overridden with user defined values
           // if the setting is a json of the correct structure, handle like a template setting
 
           let overrideHtml = "";  
@@ -428,7 +429,7 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
           //pre-check if this is a json object that needs value extraction
 
           let overridable = false;  // indicates if the setting is overridable
-          let override = false;     // If the setting is set to be overriden by the user or by default     
+          let override = false;     // If the setting is set to be overridden by the user or by default     
           let readonly = "";        // helper variable to make text input readonly
           let disabled = "";        // helper variable to make checkbox input readonly
 
@@ -712,11 +713,16 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
             settingsArray.push([prefix, setCodeName, dataType, value]);
 
-          } else if (dataType === 'boolean') {
+          } else if (inputType === 'checkbox') {
             
-            value = $(`#${setCodeName}`).is(':checked') ? 1 : 0;
-            value = applyTransformers(value, transformers);
+            value = $(`#${setCodeName}`).is(':checked') ? 1 : 0;            
 
+            if(dataType === "boolean")
+            {
+              value = value == 1 ? "True" : "False";
+            }
+
+            value = applyTransformers(value, transformers);
             settingsArray.push([prefix, setCodeName, dataType, value]);
 
           } else if (dataType === "array" ) {
@@ -752,10 +758,11 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
           } else {
             
-            console.error(`[saveSettings] Couldn't determnine how to handle (setCodeName|dataType|inputType):(${setCodeName}|${dataType}|${inputType})`);
+            console.error(`[saveSettings] Couldn't determine how to handle (setCodeName|dataType|inputType):(${setCodeName}|${dataType}|${inputType})`);
 
             value = $('#' + setCodeName).val();
             value = applyTransformers(value, transformers);
+            console.error(`[saveSettings] Saving value "${value}"`);
             settingsArray.push([prefix, setCodeName, dataType, value]);
           }
         });
@@ -787,12 +794,14 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
                 clearCache()
               } else{
-                // something went wrong
-                // write_notification(data, 'interrupt')
-                write_notification("Please screenshot the next popup (or check Monitoring > Notifications), dev console (F12) and submit it as a new issue here: https://github.com/jokob-sk/NetAlertX/issues", 'interrupt')
+                // something went wrong                
+                write_notification("[Important] DO NOT REFERSH the page. Open the browser DEV console (F12). Please take a screenshot of it. Submit it (with the nginx and php error logs) as a new issue here: https://github.com/jokob-sk/NetAlertX/issues", 'interrupt')
+
+                console.log("🔽");
                 console.log(settingsArray);
-                console.log(JSON.stringify(settingsArray));
-                write_notification(JSON.stringify(settingsArray), 'interrupt')
+                console.log(JSON.stringify(settingsArray));    
+                console.log(data);            
+                console.log("🔼");
               }
             }
           });

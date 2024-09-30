@@ -790,7 +790,6 @@ function initializeiCheck () {
     // Hide / Show Events
     if (event.currentTarget.id == 'chkHideConnectionEvents') {
       getDeviceEvents();
-      setParameter (parEventsHide, event.currentTarget.checked);
     } else {
       // Activate save & restore
       // activateSaveRestoreData();
@@ -1014,25 +1013,6 @@ function initializeDatatables () {
       "info":           "<?= lang('Events_Table_info');?>",
     }
   });
-
-  // Save Parameters rows & order when changed
-  $('#tableSessions').on( 'length.dt', function ( e, settings, len ) {
-    setParameter (parSessionsRows, len);
-
-    // Sync Rows in both datatables
-    // if ( $('#tableEvents').DataTable().page.len() != len) {
-    //   $('#tableEvents').DataTable().page.len( len ).draw();
-    // }
-  } );
-  
-  $('#tableEvents').on( 'length.dt', function ( e, settings, len ) {
-    setParameter (parEventsRows, len);
-
-    // Sync Rows in both datatables
-    // if ( $('#tableSessions').DataTable().page.len() != len) {
-    //   $('#tableSessions').DataTable().page.len( len ).draw();
-    // }
-  } );
 };
 
 
@@ -1149,10 +1129,6 @@ function initializeCalendar () {
 
 // -----------------------------------------------------------------------------
 function periodChanged () {
-  // Save Parameter Period
-  period = $('#period').val();
-  setParameter (parPeriod, period);
-
   // Requery Device data
   getDeviceData(true);
   getSessionsPresenceEvents();
@@ -1312,7 +1288,7 @@ function getDeviceData (readAllData=false) {
         if (deviceData['dev_Favorite'] == 1)         {$('#chkFavorite').iCheck('check');}    else {$('#chkFavorite').iCheck('uncheck');}
         $('#txtGroup').val                           (deviceData['dev_Group']);
         $('#txtLocation').val                        (deviceData['dev_Location']);
-        $('#txtComments').val                        (deviceData['dev_Comments']);        
+        $('#txtComments').val                        (decodeSpecialChars(deviceData['dev_Comments']));        
         $('#txtNetworkNodeMac').val                  ( networkParentMacName) ;
         $('#txtNetworkNodeMac').attr                 ('data-mynodemac', deviceData['dev_Network_Node_MAC_ADDR']);        
         $('#txtNetworkPort').val                     (deviceData['dev_Network_Node_port']);
@@ -1445,15 +1421,15 @@ function setDeviceData (direction='', refreshCallback='') {
 
   // update data to server
   $.get('php/server/devices.php?action=setDeviceData&mac='+ mac
-    + '&name='           + encodeURIComponent($('#txtName').val())
-    + '&owner='          + encodeURIComponent($('#txtOwner').val())
+    + '&name='           + encodeURIComponent($('#txtName').val().replace(/'/g, ""))
+    + '&owner='          + encodeURIComponent($('#txtOwner').val().replace(/'/g, ""))
     + '&type='           + $('#txtDeviceType').val()
-    + '&vendor='         + encodeURIComponent($('#txtVendor').val())
+    + '&vendor='         + encodeURIComponent($('#txtVendor').val().replace(/'/g, ""))
     + '&icon='           + encodeURIComponent($('#txtIcon').val())
     + '&favorite='       + ($('#chkFavorite')[0].checked * 1)
     + '&group='          + encodeURIComponent($('#txtGroup').val())
     + '&location='       + encodeURIComponent($('#txtLocation').val())
-    + '&comments='       + encodeURIComponent($('#txtComments').val())
+    + '&comments='       + encodeURIComponent(encodeSpecialChars($('#txtComments').val()))
     + '&networknode='    + $('#txtNetworkNodeMac').attr('data-mynodemac')
     + '&networknodeport=' + $('#txtNetworkPort').val()
     + '&ssid='            + $('#txtSSID').val()
@@ -1830,12 +1806,6 @@ function initTable(tableId, mac){
   });
 
   $("#"+tableId).attr("data-mac", mac)
-
-  // Save Parameters rows & order when changed
-  $('#'+tableId).on( 'length.dt', function ( e, settings, len ) {
-    setParameter (parSessionsRows, len);
-
-  } );
 
 }
 

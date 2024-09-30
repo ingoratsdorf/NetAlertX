@@ -3,9 +3,9 @@
 import io
 import sys
 import datetime
-# from datetime import strptime 
 import os
 import re
+import unicodedata
 import subprocess
 import pytz
 from pytz import timezone
@@ -319,7 +319,7 @@ def get_setting_value(key):
         set_type  = 'Error: Not handled'
         set_value = 'Error: Not handled'
 
-        set_value = setting["Value"]  # Setting value (Value (upper case) = user overriden default_value)
+        set_value = setting["Value"]  # Setting value (Value (upper case) = user overridden default_value)
         set_type = setting["Type"]  # Setting type  # lower case "type" - default json value vs uppper-case "Type" (= from user defined settings)
 
         value = setting_value_to_python_type(set_type, set_value)
@@ -804,6 +804,21 @@ def sanitize_string(input):
         input = input.decode('utf-8')
     input = bytes_to_string(re.sub(r'[^a-zA-Z0-9-_\s]', '', str(input)))
     return input
+
+
+#-------------------------------------------------------------------------------
+def sanitize_SQL_input(val):
+    if val is None:
+        return ''  
+    return val.replace("'", "_")
+
+#-------------------------------------------------------------------------------
+# Function to normalize the string and remove diacritics
+def normalize_string(text):
+    # Normalize the text to 'NFD' to separate base characters and diacritics
+    normalized_text = unicodedata.normalize('NFD', text)
+    # Filter out diacritics and unwanted characters
+    return ''.join(c for c in normalized_text if unicodedata.category(c) != 'Mn')
 
 
 #-------------------------------------------------------------------------------

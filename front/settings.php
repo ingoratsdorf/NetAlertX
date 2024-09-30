@@ -713,11 +713,16 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
             settingsArray.push([prefix, setCodeName, dataType, value]);
 
-          } else if (dataType === 'boolean') {
+          } else if (inputType === 'checkbox') {
             
-            value = $(`#${setCodeName}`).is(':checked') ? 1 : 0;
-            value = applyTransformers(value, transformers);
+            value = $(`#${setCodeName}`).is(':checked') ? 1 : 0;            
 
+            if(dataType === "boolean")
+            {
+              value = value == 1 ? "True" : "False";
+            }
+
+            value = applyTransformers(value, transformers);
             settingsArray.push([prefix, setCodeName, dataType, value]);
 
           } else if (dataType === "array" ) {
@@ -753,10 +758,11 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
           } else {
             
-            console.error(`[saveSettings] Couldn't determnine how to handle (setCodeName|dataType|inputType):(${setCodeName}|${dataType}|${inputType})`);
+            console.error(`[saveSettings] Couldn't determine how to handle (setCodeName|dataType|inputType):(${setCodeName}|${dataType}|${inputType})`);
 
             value = $('#' + setCodeName).val();
             value = applyTransformers(value, transformers);
+            console.error(`[saveSettings] Saving value "${value}"`);
             settingsArray.push([prefix, setCodeName, dataType, value]);
           }
         });
@@ -788,12 +794,14 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
                 clearCache()
               } else{
-                // something went wrong
-                // write_notification(data, 'interrupt')
-                write_notification("Please screenshot the next popup (or check Monitoring > Notifications), dev console (F12) and submit it as a new issue here: https://github.com/jokob-sk/NetAlertX/issues", 'interrupt')
+                // something went wrong                
+                write_notification("[Important] DO NOT REFERSH the page. Open the browser DEV console (F12). Please take a screenshot of it. Submit it (with the nginx and php error logs) as a new issue here: https://github.com/jokob-sk/NetAlertX/issues", 'interrupt')
+
+                console.log("🔽");
                 console.log(settingsArray);
-                console.log(JSON.stringify(settingsArray));
-                write_notification(JSON.stringify(settingsArray), 'interrupt')
+                console.log(JSON.stringify(settingsArray));    
+                console.log(data);            
+                console.log("🔼");
               }
             }
           });

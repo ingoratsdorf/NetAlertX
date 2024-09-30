@@ -3,11 +3,13 @@
 
 <?php
 require dirname(__FILE__).'/php/server/init.php';
-require 'php/templates/security.php';
+//------------------------------------------------------------------------------
+// check if authenticated
+require_once  $_SERVER['DOCUMENT_ROOT'] . '/php/templates/security.php';
 
 $CookieSaveLoginName = 'NetAlertX_SaveLogin';
 
-if ($Pia_WebProtection != 'true')
+if ($nax_WebProtection != 'true')
 {
     header('Location: devices.php');
     $_SESSION["login"] = 1;
@@ -24,7 +26,7 @@ if (isset ($_GET["action"]) && $_GET["action"] == 'logout')
 }
 
 // Password without Cookie check -> pass and set initial cookie
-if (isset ($_POST["loginpassword"]) && $Pia_Password == hash('sha256',$_POST["loginpassword"]))
+if (isset ($_POST["loginpassword"]) && $nax_Password == hash('sha256',$_POST["loginpassword"]))
 {
     header('Location: devices.php');
     $_SESSION["login"] = 1;
@@ -32,7 +34,7 @@ if (isset ($_POST["loginpassword"]) && $Pia_Password == hash('sha256',$_POST["lo
 }
 
 // active Session or valid cookie (cookie not extends)
-if (( isset ($_SESSION["login"]) && ($_SESSION["login"] == 1)) || (isset ($_COOKIE[$CookieSaveLoginName]) && $Pia_Password == $_COOKIE[$CookieSaveLoginName]))
+if (( isset ($_SESSION["login"]) && ($_SESSION["login"] == 1)) || (isset ($_COOKIE[$CookieSaveLoginName]) && $nax_Password == $_COOKIE[$CookieSaveLoginName]))
 {
     header('Location: devices.php');
     $_SESSION["login"] = 1;
@@ -40,7 +42,7 @@ if (( isset ($_SESSION["login"]) && ($_SESSION["login"] == 1)) || (isset ($_COOK
 }
 
 $login_headline = lang('Login_Toggle_Info_headline');
-$login_info = "";
+$login_info = lang('Login_Info');
 $login_mode = 'danger';
 $login_display_mode = 'display: block;';
 $login_icon = 'fa-info';
@@ -48,7 +50,7 @@ $login_icon = 'fa-info';
 // no active session, cookie not checked
 if (isset ($_SESSION["login"]) == FALSE || $_SESSION["login"] != 1)
 {
-  if ($Pia_Password == '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92') 
+  if ($nax_Password == '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92') 
   {
     $login_info = lang('Login_Default_PWD');
     $login_mode = 'danger';
@@ -91,6 +93,13 @@ if (isset ($_SESSION["login"]) == FALSE || $_SESSION["login"] != 1)
   <link rel="stylesheet" href="lib/AdminLTE/dist/css/AdminLTE.min.css">
   <!-- iCheck -->
   <link rel="stylesheet" href="lib/AdminLTE/plugins/iCheck/square/blue.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/fontawesome.min.css">
+  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/solid.css">
+  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/brands.css">
+  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/v5-font-face.css">
+  <!-- Favicon -->
+  <link id="favicon" rel="icon" type="image/x-icon" href="img/NetAlertX_logo.png">
 
   <!-- Dark-Mode Patch -->
 <?php
@@ -140,11 +149,9 @@ if ($ENABLED_DARKMODE === True) {
   </div>
   <!-- /.login-box-body -->
 
-
-
   <div id="myDIV" class="box-body" style="margin-top: 50px; <?php echo $login_display_mode;?>">
       <div class="alert alert-<?php echo $login_mode;?> alert-dismissible">
-          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">�</button>
+          <button type="button" class="close" onclick="Passwordhinfo()" aria-hidden="true">X</button>
           <h4><i class="icon fa <?php echo $login_icon;?>"></i><?php echo $login_headline;?></h4>
           <p><?php echo $login_info;?></p>
       </div>

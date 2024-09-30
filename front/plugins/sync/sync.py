@@ -19,7 +19,7 @@ from plugin_utils import get_plugins_configs, decode_and_rename_files
 from logger import mylog
 from const import pluginsPath, fullDbPath
 from helper import timeNowTZ, get_setting_value 
-from cryptography import encrypt_data
+from crypto_utils import encrypt_data
 from notification import write_notification
 import conf
 from pytz import timezone
@@ -305,7 +305,7 @@ def get_data(api_token, node_url):
     api_endpoint = f"{node_url}/plugins/sync/hub.php"
     response = requests.get(api_endpoint, headers=headers)
 
-    # mylog('verbose', [f'[{pluginName}] response: "{response}"'])
+    # mylog('verbose', [f'[{pluginName}] response: "{response.text}"'])
 
     if response.status_code == 200:
         try:

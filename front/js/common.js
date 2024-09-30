@@ -342,6 +342,8 @@ function getLangCode() {
 // -----------------------------------------------------------------------------
 // String utilities
 // -----------------------------------------------------------------------------
+
+// ----------------------------------------------------
 function jsonSyntaxHighlight(json) {
   if (typeof json != 'string') {
        json = JSON.stringify(json, undefined, 2);
@@ -364,6 +366,7 @@ function jsonSyntaxHighlight(json) {
   });
 }
 
+// ----------------------------------------------------
 function isValidBase64(str) {
   // Base64 characters set
   var base64CharacterSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
@@ -373,7 +376,7 @@ function isValidBase64(str) {
   return invalidCharacters === '';
 }
 
-
+// ----------------------------------------------------
 function isValidJSON(jsonString) {
   try {
       JSON.parse(jsonString);
@@ -382,6 +385,37 @@ function isValidJSON(jsonString) {
       return false;
   }
 }
+
+// ----------------------------------------------------
+// method to sanitize input so that HTML and other things don't break
+function encodeSpecialChars(str) {
+  return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+}
+// ----------------------------------------------------
+function decodeSpecialChars(str) {
+  return str
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, '\'');
+}
+
+// ----------------------------------------------------
+// base64 conversion of UTF8 chars
+function utf8ToBase64(str) {
+  // Convert the string to a Uint8Array using TextEncoder
+  const utf8Bytes = new TextEncoder().encode(str);
+  
+  // Convert the Uint8Array to a base64-encoded string
+  return btoa(String.fromCharCode(...utf8Bytes));
+}
+
 
 // -----------------------------------------------------------------------------
 // General utilities
@@ -422,29 +456,6 @@ function numberArrayFromString(data)
   data = JSON.parse(sanitize(data));
   return data.replace(/\[|\]/g, '').split(',').map(Number);
 }
-
-// -----------------------------------------------------------------------------
-function setParameter (parameter, value) {
-  // Retry
-  $.get('php/server/parameters.php?action=set&parameter=' + parameter +
-    '&value='+ value,
-  function(data) {
-    if (data != "OK") {
-      // Retry
-      sleep (200);
-      $.get('php/server/parameters.php?action=set&parameter=' + parameter +
-        '&value='+ value,
-        function(data) {
-          if (data != "OK") {
-          // alert (data);
-          } else {
-          // alert ("OK. Second attempt");
-          };
-      } );
-    };
-  } );
-}
-
 
 // -----------------------------------------------------------------------------  
 function saveData(functionName, id, value) {

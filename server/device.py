@@ -42,6 +42,39 @@ class Device_obj:
 
 
 #-------------------------------------------------------------------------------
+# Removing devices from the CurrentScan DB table which the user chose to ignore by MAC or IP
+def exclude_ignored_devices(db):
+    sql = db.sql  # Database interface for executing queries
+
+    mac_condition = list_to_where('OR', 'cur_MAC', 'LIKE', get_setting_value('NEWDEV_ignored_MACs'))
+    ip_condition = list_to_where('OR', 'cur_IP', 'LIKE', get_setting_value('NEWDEV_ignored_IPs'))
+
+    # Only delete if either the MAC or IP matches an ignored condition
+    conditions = []
+    if mac_condition:
+        conditions.append(mac_condition)
+    if ip_condition:
+        conditions.append(ip_condition)
+
+    # Join conditions and prepare the query
+    conditions_str = " OR ".join(conditions)
+    if conditions_str:
+        query = f"""DELETE FROM CurrentScan WHERE 
+                        1=1
+                        AND (
+                            {conditions_str}
+                        )
+                """
+    else:
+        query = "DELETE FROM CurrentScan WHERE 1=1 AND 1=0"  # No valid conditions, prevent deletion
+
+    mylog('debug', f'[New Devices] Excluding Ignored Devices Query: {query}')
+
+    sql.execute(query)
+
+    
+
+#-------------------------------------------------------------------------------
 def save_scanned_devices (db):
     sql = db.sql #TO-DO
 
@@ -145,13 +178,11 @@ def create_new_devices (db):
                     SELECT cur_MAC, cur_IP, '{startTime}', 'New Device', cur_Vendor, 1
                     FROM CurrentScan
                     WHERE NOT EXISTS (SELECT 1 FROM Devices
-                                      WHERE dev_MAC = cur_MAC) 
-                            {list_to_where('OR', 'cur_MAC', 'NOT LIKE', get_setting_value('NEWDEV_ignored_MACs'))}
-                            {list_to_where('OR', 'cur_IP', 'NOT LIKE', get_setting_value('NEWDEV_ignored_IPs'))}
+                                      WHERE dev_MAC = cur_MAC)
                 """ 
 
     
-    mylog('debug',f'[New Devices] Query: {query}')
+    mylog('debug',f'[New Devices] Log Events Query: {query}')
     
     sql.execute(query)
 
@@ -163,27 +194,25 @@ def create_new_devices (db):
                     FROM CurrentScan 
                     WHERE NOT EXISTS (SELECT 1 FROM Sessions
                                       WHERE ses_MAC = cur_MAC) 
-                            {list_to_where('OR', 'cur_MAC', 'NOT LIKE', get_setting_value('NEWDEV_ignored_MACs'))}
-                            {list_to_where('OR', 'cur_IP', 'NOT LIKE', get_setting_value('NEWDEV_ignored_IPs'))}
                     """)
                     
     # Create new devices from CurrentScan
     mylog('debug','[New Devices] 2 Create devices')
 
     # default New Device values preparation
-    newDevColumns = """dev_AlertEvents, 
-                    dev_AlertDeviceDown, 
-                    dev_PresentLastScan, 
-                    dev_Archived, 
-                    dev_NewDevice, 
-                    dev_SkipRepeated, 
-                    dev_ScanCycle, 
-                    dev_Owner, 
-                    dev_Favorite, 
-                    dev_Group, 
-                    dev_Comments, 
-                    dev_LogEvents, 
-                    dev_Location"""
+    newDevColumns =  """dev_AlertEvents, 
+                        dev_AlertDeviceDown, 
+                        dev_PresentLastScan, 
+                        dev_Archived, 
+                        dev_NewDevice, 
+                        dev_SkipRepeated, 
+                        dev_ScanCycle, 
+                        dev_Owner, 
+                        dev_Favorite, 
+                        dev_Group, 
+                        dev_Comments, 
+                        dev_LogEvents, 
+                        dev_Location"""
 
     newDevDefaults = f"""{get_setting_value('NEWDEV_dev_AlertEvents')}, 
                         {get_setting_value('NEWDEV_dev_AlertDeviceDown')}, 
@@ -199,11 +228,16 @@ def create_new_devices (db):
                         {get_setting_value('NEWDEV_dev_LogEvents')}, 
                         '{sanitize_SQL_input(get_setting_value('NEWDEV_dev_Location'))}'"""
 
-    # Fetch data from CurrentScan
-    current_scan_data = sql.execute("SELECT cur_MAC, cur_Name, cur_Vendor, cur_IP, cur_SyncHubNodeName, cur_NetworkNodeMAC, cur_PORT, cur_NetworkSite, cur_SSID, cur_Type FROM CurrentScan").fetchall()
+    # Fetch data from CurrentScan skipping ignored devices by IP and MAC
+    query = f"""SELECT cur_MAC, cur_Name, cur_Vendor, cur_ScanMethod, cur_IP, cur_SyncHubNodeName, cur_NetworkNodeMAC, cur_PORT, cur_NetworkSite, cur_SSID, cur_Type 
+                FROM CurrentScan """ 
+
+    
+    mylog('debug',f'[New Devices] Collecting New Devices Query: {query}')
+    current_scan_data = sql.execute(query).fetchall()
 
     for row in current_scan_data:
-        cur_MAC, cur_Name, cur_Vendor, cur_IP, cur_SyncHubNodeName, cur_NetworkNodeMAC, cur_PORT, cur_NetworkSite, cur_SSID, cur_Type = row
+        cur_MAC, cur_Name, cur_Vendor, cur_ScanMethod, cur_IP, cur_SyncHubNodeName, cur_NetworkNodeMAC, cur_PORT, cur_NetworkSite, cur_SSID, cur_Type = row
 
         # Handle NoneType
         cur_Name = cur_Name.strip() if cur_Name else '(unknown)'
@@ -228,6 +262,7 @@ def create_new_devices (db):
                             dev_NetworkSite, 
                             dev_SSID,
                             dev_DeviceType,                          
+                            dev_SourcePlugin,                          
                             {newDevColumns}
                         )
                         VALUES 
@@ -245,6 +280,7 @@ def create_new_devices (db):
                             '{sanitize_SQL_input(cur_NetworkSite)}', 
                             '{sanitize_SQL_input(cur_SSID)}',
                             '{sanitize_SQL_input(cur_Type)}', 
+                            '{sanitize_SQL_input(cur_ScanMethod)}', 
                             {newDevDefaults}
                         )"""
 
@@ -425,7 +461,7 @@ def update_devices_data_from_scan (db):
     default_icon = get_setting_value('NEWDEV_dev_Icon')
     
     for device in sql.execute (query) :
-        # Conditional logic for dev_Icon guessing        
+        # Conditional logic for dev_Icon guessing       
         dev_Icon = guess_icon(device['dev_Vendor'], device['dev_MAC'], device['dev_LastIP'], device['dev_Name'], default_icon)
 
         recordsToUpdate.append ([dev_Icon, device['dev_MAC']])
@@ -643,7 +679,10 @@ icons = {
 
 #-------------------------------------------------------------------------------
 # Guess device icon
-def guess_icon(vendor, mac, ip, name,  default):
+def guess_icon(vendor, mac, ip, name,  default):    
+            
+    mylog('debug', [f"[guess_icon] Guessing icon for (vendor|mac|ip|name): ('{vendor}'|'{mac}'|{ip}|{name})"])
+    
     result = default
     mac    = mac.upper()
     vendor = vendor.lower() if vendor else "unknown"
@@ -672,7 +711,7 @@ def guess_icon(vendor, mac, ip, name,  default):
         result = icons.get("microchip")
 
     # Guess icon based on MAC address patterns
-    elif mac == "INTERNET":  # Apple
+    elif mac == "INTERNET":  
         result = icons.get("globe")
     elif mac.startswith("00:1A:79"):  # Apple
         result = icons.get("apple")

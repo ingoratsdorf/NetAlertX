@@ -137,7 +137,7 @@ def importConfigs (db, all_plugins):
     # ----------------------------------------
     # ccd(key, default, config_dir, name, inputtype, options, group, events=[], desc = "", regex = "", setJsonMetadata = {}, overrideTemplate = {})
     
-    conf.LOADED_PLUGINS = ccd('LOADED_PLUGINS', [] , c_d, 'Loaded plugins', '{"dataType":"array", "elements": [{"elementType" : "select", "elementOptions" : [{"multiple":"true"}] ,"transformers": []}]}', '[]', 'General')
+    conf.LOADED_PLUGINS = ccd('LOADED_PLUGINS', [] , c_d, 'Loaded plugins', '{"dataType":"array", "elements": [{"elementType" : "select", "elementOptions" : [{"multiple":"true", "ordeable": "true"}] ,"transformers": []}]}', '[]', 'General')
     conf.SCAN_SUBNETS = ccd('SCAN_SUBNETS', ['192.168.1.0/24 --interface=eth1', '192.168.1.0/24 --interface=eth0'] , c_d, 'Subnets to scan', '{"dataType": "array","elements": [{"elementType": "input","elementOptions": [{"placeholder": "192.168.1.0/24 --interface=eth1"},{"suffix": "_in"},{"cssClasses": "col-sm-10"},{"prefillValue": "null"}],"transformers": []},{"elementType": "button","elementOptions": [{"sourceSuffixes": ["_in"]},{"separator": ""},{"cssClasses": "col-xs-12"},{"onClick": "addList(this, false)"},{"getStringKey": "Gen_Add"}],"transformers": []},{"elementType": "select","elementHasInputValue": 1,"elementOptions": [{"multiple": "true"},{"readonly": "true"},{"editable": "true"}],"transformers": []},{"elementType": "button","elementOptions": [{"sourceSuffixes": []},{"separator": ""},{"cssClasses": "col-xs-6"},{"onClick": "removeAllOptions(this)"},{"getStringKey": "Gen_Remove_All"}],"transformers": []},{"elementType": "button","elementOptions": [{"sourceSuffixes": []},{"separator": ""},{"cssClasses": "col-xs-6"},{"onClick": "removeFromList(this)"},{"getStringKey": "Gen_Remove_Last"}],"transformers": []}]}', '[]', 'General')    
     conf.LOG_LEVEL = ccd('LOG_LEVEL', 'verbose' , c_d, 'Log verboseness', '{"dataType":"string", "elements": [{"elementType" : "select", "elementOptions" : [] ,"transformers": []}]}', "['none', 'minimal', 'verbose', 'debug', 'trace']", 'General')
     conf.TIMEZONE = ccd('TIMEZONE', 'Europe/Berlin' , c_d, 'Time zone', '{"dataType":"string", "elements": [{"elementType" : "input", "elementOptions" : [] ,"transformers": []}]}', '[]', 'General')    
@@ -289,16 +289,16 @@ def importConfigs (db, all_plugins):
         loaded_plugins_prefixes.append(pref)
         
     # save the newly discovered plugins as options and default values
-    conf.LOADED_PLUGINS = ccd('LOADED_PLUGINS', loaded_plugins_prefixes , c_d, 'Loaded plugins', '{"dataType":"array", "elements": [{"elementType" : "select", "elementOptions" : [{"multiple":"true"}] ,"transformers": []}]}', str(sorted(all_plugins_prefixes)), 'General')
+    conf.LOADED_PLUGINS = ccd('LOADED_PLUGINS', loaded_plugins_prefixes , c_d, '_KEEP_', '_KEEP_', str(sorted(all_plugins_prefixes)), 'General')
 
     mylog('none', ['[Config] Number of Plugins to load: ', len(loaded_plugins_prefixes)])
     mylog('none', ['[Config] Plugins to load: ', loaded_plugins_prefixes])
 
     conf.plugins_once_run = False
-    # -----------------
-    # Plugins END
     
+    # -----------------
     # HANDLE APP_CONF_OVERRIDE via app_conf_override.json
+    
     # Assuming fullConfFolder is defined elsewhere
     app_conf_override_path = fullConfFolder + '/app_conf_override.json'
 
@@ -327,6 +327,9 @@ def importConfigs (db, all_plugins):
     else:
         mylog('debug', [f"[Config] File {app_conf_override_path} does not exist."])
   
+    # -----------------
+    # HANDLE APP was upgraded message - clear cache
+    
     # Check if app was upgraded
     with open(applicationPath + '/front/buildtimestamp.txt', 'r') as f:
         
@@ -346,6 +349,9 @@ def importConfigs (db, all_plugins):
             write_notification(f'[Upgrade] : App upgraded 🚀 Please clear the cache: <ol> <li>Click OK below</li>  <li>Clear the browser cache (shift + browser refresh button)</li> <li> Clear app cache with the 🔄 (reload) button in the header</li><li>Go to Settings and click Save</li> </ol> Check out new features and what has changed in the <a href="https://github.com/jokob-sk/NetAlertX/releases" target="_blank">📓 release notes</a>.', 'interrupt', timeNowTZ())
 
 
+    # -----------------
+    # Initialization finished, update DB and API endpoints
+    
     # Insert settings into the DB    
     sql.execute ("DELETE FROM Settings")    
     # mylog('debug', [f"[Config] conf.mySettingsSQLsafe  : '{conf.mySettingsSQLsafe}'"])

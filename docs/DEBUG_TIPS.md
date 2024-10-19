@@ -49,6 +49,17 @@ services:
     # Other service configurations...
 ```
 
+## 5. Sharing application state
+
+Sometimes specific log sections are needed to debug issues. The Devices and CurrentScan table data is sometimes needed to figure out what's wrong. 
+
+1. Please set `LOG_LEVEL` to `trace` (Disable it once you have the info as this produces big log files).
+2. Wait for the issue to occur.
+3. Search for `================ DEVICES table content  ================` in your logs.
+4. Search for `================ CurrentScan table content  ================` in your logs.
+5. Open a new issue and post (redacted) output into the issue description (or send to the netalertx@gmail.com email if sensitive data present).
+6. Please set `LOG_LEVEL` to `debug` or lower.
+
 ## 📃Common issues
 
 ### Permissions
@@ -81,3 +92,7 @@ sudo dpkg -i libseccomp2_2.5.3-2_armhf.deb
 ```
 
 The link above will probably break in time too. Go to https://packages.debian.org/sid/armhf/libseccomp2/download to find the new version number and put that in the url.
+
+### Only Router and own device show up
+
+Make sure that the subnet and interface in SCAN_SUBNETS are the correct ones. If your device/NAS has multiple ethernet ports, you probably need to change eth0 to something else!

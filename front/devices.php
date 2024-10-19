@@ -456,7 +456,8 @@ function initializeDatatable (status) {
                 item.dev_GUID || "",
                 item.dev_SyncHubNodeName || "",
                 item.dev_NetworkSite || "",
-                item.dev_SSID || ""
+                item.dev_SSID || "",
+                item.dev_SourcePlugin || ""
             ];
 
             var newRow = [];
@@ -630,11 +631,11 @@ function initializeDatatable (status) {
 
     // Save cookie Rows displayed, and Parameters rows & order
     $('#tableDevices').on( 'length.dt', function ( e, settings, len ) {
-      setCookie ("nax_parTableRows", len);
+      setCookie ("nax_parTableRows", len, 129600); // save for 90 days
     } );
       
     $('#tableDevices').on( 'order.dt', function () {
-      setCookie ("nax_parTableOrder", JSON.stringify (table.order()) );
+      setCookie ("nax_parTableOrder", JSON.stringify (table.order()), 129600); // save for 90 days
       setCache ('devicesList', getDevicesFromTable(table) );
     } );
 

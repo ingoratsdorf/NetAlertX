@@ -6,6 +6,15 @@
   "data_source": "script",
   "execution_order" : "Layer_3",
   "show_ui": true,
+  "data_filters": [
+    {
+      "compare_column": "Object_PrimaryID",
+      "compare_operator": "==",
+      "compare_field_id": "txtMacFilter",
+      "compare_js_template": "'{value}'.toString()",
+      "compare_use_quotes": true
+    }
+  ],
   "localized": ["display_name", "description", "icon"],
   "display_name": [
     {
@@ -70,7 +79,7 @@
       "description": [
         {
           "language_code": "en_us",
-          "string": "When the plugin should be executed. If enabled this will execute the scan until there are no <code>(unknown)</code> or <code>(name not found)</code> devices. Setting this to <code>on_new_device</code> or a daily <code>schedule</code> is recommended.<br/><br/> Depends on the <a onclick=\"toggleAllSettings()\" href=\"#SCAN_SUBNETS\"><code>SCAN_SUBNETS</code> setting</a>."
+          "string": "When the plugin should be executed. If enabled this will execute the scan until there are no <code>(unknown)</code> or <code>(name not found)</code> devices. Setting this to <code>on_new_device</code> or a daily <code>schedule</code> is recommended."
         }
       ]
     },

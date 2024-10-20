@@ -2,7 +2,7 @@
 [![Docker Size](https://img.shields.io/docker/image-size/jokobsk/netalertx?label=Size&logo=Docker&color=0aa8d2&logoColor=fff&style=for-the-badge)](https://hub.docker.com/r/jokobsk/netalertx)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jokobsk/netalertx?label=Pulls&logo=docker&color=0aa8d2&logoColor=fff&style=for-the-badge)](https://hub.docker.com/r/jokobsk/netalertx)
 [![GitHub Release](https://img.shields.io/github/v/release/jokob-sk/NetAlertX?color=0aa8d2&logoColor=fff&logo=GitHub&style=for-the-badge)](https://github.com/jokob-sk/NetAlertX/releases)
-[![Discord](https://img.shields.io/discord/1274490466481602755?color=0aa8d2&logoColor=fff&logo=Discord&style=for-the-badge)](https://discord.gg/UQnnHNYV)
+[![Discord](https://img.shields.io/discord/1274490466481602755?color=0aa8d2&logoColor=fff&logo=Discord&style=for-the-badge)](https://discord.gg/NczTUTWyRr)
 
 
 # NetAlertX 🖧🔍 Network scanner & notification framework
@@ -41,7 +41,7 @@ docker run -d --rm --network=host \
 | `PORT`      |Port of the web interface  |  `20211` |
 | `LISTEN_ADDR`      |Set the specific IP Address for the listener address for the nginx webserver (web interface). This could be useful when using multiple subnets to hide the web interface from all untrusted networks. |  `0.0.0.0` |
 |`TZ` |Time zone to display stats correctly. Find your time zone [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)  |  `Europe/Berlin` |
-|`APP_CONF_OVERRIDE` | JSON override for settings, e.g. `{"SCAN_SUBNETS":"['192.168.1.0/24 --interface=eth1']","UI_dark_mode":"True"}` (Experimental 🧪)  |  `N/A` |
+|`APP_CONF_OVERRIDE` | JSON override for settings, e.g. `{"SCAN_SUBNETS":"['192.168.1.0/24 --interface=eth1']","UI_theme":"Dark"}` (Experimental 🧪)  |  `N/A` |
 |`ALWAYS_FRESH_INSTALL` | If `true` will delete the content of the `/db` & `/config` folders. For testing purposes. Can be coupled with [watchtower](https://github.com/containrrr/watchtower) to have an always freshly installed `netalertx`/`netalertx-dev` image.   |    `N/A` |
 
 ### Docker paths

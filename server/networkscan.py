@@ -3,7 +3,7 @@
 import conf
 
 
-from device import create_new_devices, print_scan_stats, save_scanned_devices, update_devices_data_from_scan
+from device import create_new_devices, print_scan_stats, save_scanned_devices, update_devices_data_from_scan, exclude_ignored_devices
 from helper import timeNowTZ
 from logger import mylog
 from reporting import skip_repeated_notifications
@@ -16,7 +16,11 @@ from reporting import skip_repeated_notifications
 
 def process_scan (db):
 
-     # Load current scan data
+    # Apply exclusions
+    mylog('verbose','[Process Scan]  Exclude ignored devices')     
+    exclude_ignored_devices (db)    
+
+    # Load current scan data
     mylog('verbose','[Process Scan]  Processing scan results')     
     save_scanned_devices (db)    
 
@@ -28,7 +32,7 @@ def process_scan (db):
     mylog('none','[Process Scan] Stats end')
 
     # Create Events    
-    mylog('verbose','[Process Scan] Sessions Events (connect / discconnect)')
+    mylog('verbose','[Process Scan] Sessions Events (connect / disconnect)')
     insert_events(db)
 
     # Create New Devices
@@ -202,10 +206,9 @@ def insert_events (db):
                                         END,
                                         '',
                                         1
-                        FROM LatestEventsPerMAC AS d 
-                        JOIN CurrentScan AS c ON d.dev_MAC = c.cur_MAC
-                        LEFT JOIN LatestEventsPerMAC AS last_event ON d.dev_MAC = last_event.eve_MAC 
-                        WHERE d.dev_PresentLastScan = 0   
+                        FROM CurrentScan AS c 
+                        LEFT JOIN LatestEventsPerMAC AS last_event ON c.cur_MAC = last_event.eve_MAC 
+                        WHERE last_event.dev_PresentLastScan = 0 OR last_event.eve_MAC IS NULL
                         """)
 
     # Check disconnections

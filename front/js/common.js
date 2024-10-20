@@ -12,7 +12,7 @@ var timerRefreshData = ''
 
 var   emptyArr      = ['undefined', "", undefined, null, 'null'];
 var   UI_LANG       = "English";
-const allLanguages  = ["en_us", "es_es", "de_de", "fr_fr", "it_it", "ru_ru", "nb_no", "pl_pl", "pt_br", "tr_tr", "zh_cn", "cs_cz"]; // needs to be same as in lang.php
+const allLanguages  = ["en_us", "es_es", "de_de", "fr_fr", "it_it", "ru_ru", "nb_no", "pl_pl", "pt_br", "tr_tr", "zh_cn", "cs_cz", "ar_ar"]; // needs to be same as in lang.php
 var   settingsJSON  = {}
 
 
@@ -289,6 +289,7 @@ function getString(key) {
 
 // -----------------------------------------------------------------------------
 // Get current language ISO code
+// below has to match exactly teh values in /front/php/templates/language/lang.php & /front/js/common.js
 function getLangCode() {
 
     UI_LANG = getSetting("UI_LANG");
@@ -331,6 +332,9 @@ function getLangCode() {
         break;
       case 'Czech (cs_cz)':
         lang_code = 'cs_cz';
+        break;
+      case 'Arabic (ar_ar)':
+        lang_code = 'ar_ar';
         break;
     }
 
@@ -1182,20 +1186,24 @@ function hideUIelements(settingKey) {
 
 
 // -----------------------------------------------------------------------------
-// apply dark mode
+// apply theme
 
 $(document).ready(function() {
-  // Assume getSetting is a function that returns true or false for dark mode
-  if (getSetting("UI_dark_mode") === "True") {
-    // Add the dark mode stylesheet
-    setCookie("UI_dark_mode", "True")
-    $('head').append('<link rel="stylesheet" href="css/dark-patch.css">');
-    // Set the background image for dark mode
-    $('body').attr('style', 'background-image: url(\'img/boxed-bg-dark.png\');');
+  let theme = getSetting("UI_theme");
+  if (theme) {
+    theme = theme.replace("['","").replace("']","");
+    // Add the theme stylesheet
+    setCookie("UI_theme", theme);
+    switch(theme) {
+      case "Dark":
+	$('head').append('<link rel="stylesheet" href="css/dark-patch.css">');
+	break;
+      case "System":
+	$('head').append('<link rel="stylesheet" href="css/system-dark-patch.css">');
+	break
+    }
   } else {
-    setCookie("UI_dark_mode", "False")
-    // Set the background image for light mode
-    $('body').attr('style', 'background-image: url(\'img/background.png\');');
+    setCookie("UI_theme", "Light");
   }
 });
 

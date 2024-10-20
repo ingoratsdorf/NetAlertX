@@ -8,7 +8,7 @@ NetAlertX supports additional plugins to extend its functionality, each with its
 ## ⚡ Quick start
 
 > [!TIP]
-> You can load additional Plugins via the General -> `LOADED_PLUGINS` setting. Use `Ctrl + Click` to select/deselect. 
+> You can load additional Plugins via the General -> `LOADED_PLUGINS` setting. 
 
 1. Pick your `🔍 dev scanner` plugin (e.g. `ARPSCAN` or `NMAPDEV`), or import devices into the application with an `📥 importer` plugin. (See **✅Enabling plugins** below)
 2. Pick a `▶️ publisher` plugin, if you want to send notifications. If you don't see a publisher you'd like to use, look at the  [📚_publisher_apprise](/front/plugins/_publisher_apprise/) plugin which is a proxy for over 80 notification services. 
@@ -28,6 +28,7 @@ Device-detecting plugins insert values into the `CurrentScan` database table.  T
 |---------------|---------|--------------------------------------------|----------|----------|--------------------|---------------------------------------------------------------|
 | `APPRISE`     | ▶️      | Apprise notification proxy                |           |          | Script       | [_publisher_apprise](/front/plugins/_publisher_apprise/)          |
 | `ARPSCAN`     | 🔍      | ARP-scan on current network               |           |          | Script       | [arp_scan](/front/plugins/arp_scan/)                              |
+| `AVAHISCAN`   | ♻       | Avahi (mDNS-based) name resolution        |           |          | Script       | [avahi_scan](/front/plugins/avahi_scan/)                          |
 | `CSVBCKP`     | ⚙       | CSV devices backup                        |           |          | Script       | [csv_backup](/front/plugins/csv_backup/)                          |
 | `DBCLNP`      | ⚙       | Database cleanup                          |           |  Yes*    | Script       | [db_cleanup](/front/plugins/db_cleanup/)                          |
 | `DDNS`        | ⚙       | DDNS update                               |           |          | Script       | [ddns_update](/front/plugins/ddns_update/)                        |
@@ -70,13 +71,13 @@ Device-detecting plugins insert values into the `CurrentScan` database table.  T
 ## Plugin types
 
 
-| Plugin type   | Icon  | Description                                                  |  When to run         | Required | Data source [?](/docs/PLUGINS_DEV.md) |
-|---------------|------|---------------------------------------------------------------|--------------------------|----|---------|
-|  publisher    | ▶️   | Sending notifications to services.                              | `on_notification`       |  ✖ | Script | 
-|  dev scanner  | 🔍   | Create devices in the app, usually scanning the current network. | `schedule`             |  ✖ | Script / SQLite DB  | 
-|  importer     | 📥   | Importing devices from another service.                         | `schedule`             |  ✖ | Script / SQLite DB  | 
-|  system       | ⚙   | Providing core system functionality.                             | `schedule` / always on  |  ✖/✔ | Script / Template | 
-|  other        | ♻   | Other scanners, e.g. for name resolution                         | misc                    |  ✖ | Script / Template | 
+| Plugin type   | Icon  | Description                                                   |  When to run         | Required | Data source [?](/docs/PLUGINS_DEV.md) |
+|---------------|------|----------------------------------------------------------------|--------------------------|----|---------|
+|  publisher    | ▶️ | Sending notifications to services.                               | `on_notification`       |  ✖ | Script | 
+|  dev scanner  | 🔍 | Create devices in the app, manages online/offline device status. | `schedule`             |  ✖ | Script / SQLite DB  | 
+|  importer     | 📥 | Importing devices from another service.                          | `schedule`             |  ✖ | Script / SQLite DB  | 
+|  system       | ⚙  | Providing core system functionality.                             | `schedule` / always on  |  ✖/✔ | Script / Template | 
+|  other        | ♻  | Other scanners, e.g. for name resolution                         | misc                    |  ✖ | Script / Template | 
 
 ## Features
 

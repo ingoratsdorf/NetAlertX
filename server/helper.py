@@ -462,19 +462,23 @@ def list_to_where(logical_operator, column_name, condition_operator, values_list
     - A string representing the WHERE condition.
     """
 
+    # If the list is empty, return an empty string
     if not values_list:
-        return ""  # Return an empty string if the list is empty to avoid breaking the SQL condition.
+        return ""
 
     # Replace {s-quote} with single quote in values_list
     values_list = [value.replace("{s-quote}", "'") for value in values_list]
 
-    # Build the WHERE condition
+    # Build the WHERE condition for the first value
     condition = f"{column_name} {condition_operator} '{values_list[0]}'"
 
+    # Add the rest of the values using the logical operator
     for value in values_list[1:]:
         condition += f" {logical_operator} {column_name} {condition_operator} '{value}'"
 
-    return f' AND ({condition}) ' 
+    return f'({condition})'
+
+
 
 
 
@@ -852,8 +856,11 @@ def sanitize_string(input):
 #-------------------------------------------------------------------------------
 def sanitize_SQL_input(val):
     if val is None:
-        return ''  
-    return val.replace("'", "_")
+        return ''
+    if isinstance(val, str):
+        return val.replace("'", "_")
+    return val  # Return non-string values as they are
+
 
 #-------------------------------------------------------------------------------
 # Function to normalize the string and remove diacritics

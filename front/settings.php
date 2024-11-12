@@ -145,10 +145,7 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
 
       <section class=" settings-sticky-bottom-section  col-sm-10 col-xs-12">
-        <div class="col-xs-8 settingsSearchWrap form-group has-success bg-white color-palette ">
-          <div class ="col-xs-8">
-            <i class="fa-solid fa-filter"></i> <?= lang("Gen_Filter");?>  
-          </div>
+        <div class="col-xs-8 settingsSearchWrap has-success bg-white color-palette ">
             <div class ="col-xs-12">
 
               <input type="text" id="settingsSearch" class="form-control input-xs col-xs-12" placeholder="Filter Settings...">
@@ -467,10 +464,10 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
           
           // INPUT
 
-          // console.log(codeName);
-          
           // Parse the setType JSON string into an object
           let inputHtml = '';
+
+          console.log(codeName);
           console.log(setType);
           
           const setTypeObject = JSON.parse(setType.replace(/'/g, '"'));
@@ -799,6 +796,8 @@ $settingsJSON_DB = json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX
 
                 // Reloads the current page
                 // setTimeout("clearCache()", 5000);    
+
+                write_notification(`[Settings] Settings saved by the user`, 'info')
 
                 clearCache()
               } else{

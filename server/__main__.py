@@ -19,6 +19,7 @@ import sys
 import time
 import datetime
 import multiprocessing
+import subprocess
 
 # Register NetAlertX modules 
 import conf
@@ -33,7 +34,6 @@ from reporting import get_notifications
 from notification import Notification_obj
 from plugin import run_plugin_scripts, check_and_run_user_event 
 from device import update_devices_names
-
 
 #===============================================================================
 #===============================================================================

@@ -34,6 +34,7 @@ def main():
     
     PLUGINS_KEEP_HIST       = int(get_setting_value("PLUGINS_KEEP_HIST"))
     HRS_TO_KEEP_NEWDEV      = int(get_setting_value("HRS_TO_KEEP_NEWDEV"))
+    HRS_TO_KEEP_OFFDEV      = int(get_setting_value("HRS_TO_KEEP_OFFDEV"))
     DAYS_TO_KEEP_EVENTS     = int(get_setting_value("DAYS_TO_KEEP_EVENTS"))
     PHOLUS_DAYS_DATA        = get_setting_value("PHOLUS_DAYS_DATA")
     CLEAR_NEW_FLAG          = get_setting_value("CLEAR_NEW_FLAG")
@@ -42,7 +43,7 @@ def main():
 
 
     # Execute cleanup/upkeep    
-    cleanup_database(fullDbPath, DAYS_TO_KEEP_EVENTS, PHOLUS_DAYS_DATA, HRS_TO_KEEP_NEWDEV, PLUGINS_KEEP_HIST, CLEAR_NEW_FLAG)
+    cleanup_database(fullDbPath, DAYS_TO_KEEP_EVENTS, PHOLUS_DAYS_DATA, HRS_TO_KEEP_NEWDEV, HRS_TO_KEEP_OFFDEV, PLUGINS_KEEP_HIST, CLEAR_NEW_FLAG)
     
     mylog('verbose', [f'[{pluginName}] Cleanup complete'])   
     
@@ -51,7 +52,7 @@ def main():
 #===============================================================================
 # Cleanup / upkeep database
 #===============================================================================
-def cleanup_database (dbPath, DAYS_TO_KEEP_EVENTS, PHOLUS_DAYS_DATA, HRS_TO_KEEP_NEWDEV, PLUGINS_KEEP_HIST, CLEAR_NEW_FLAG):
+def cleanup_database (dbPath, DAYS_TO_KEEP_EVENTS, PHOLUS_DAYS_DATA, HRS_TO_KEEP_NEWDEV, HRS_TO_KEEP_OFFDEV, PLUGINS_KEEP_HIST, CLEAR_NEW_FLAG):
     """
     Cleaning out old records from the tables that don't need to keep all data.
     """
@@ -140,7 +141,15 @@ def cleanup_database (dbPath, DAYS_TO_KEEP_EVENTS, PHOLUS_DAYS_DATA, HRS_TO_KEEP
     # Cleanup New Devices
     if HRS_TO_KEEP_NEWDEV != 0:
         mylog('verbose', [f'[{pluginName}] Devices: Delete all New Devices older than {str(HRS_TO_KEEP_NEWDEV)} hours (HRS_TO_KEEP_NEWDEV setting)'])            
-        query = f"""DELETE FROM Devices WHERE dev_NewDevice = 1 AND dev_FirstConnection < date('now', '-{str(HRS_TO_KEEP_NEWDEV)} hour')"""
+        query = f"""DELETE FROM Devices WHERE devIsNew = 1 AND devFirstConnection < date('now', '-{str(HRS_TO_KEEP_NEWDEV)} hour')"""
+        mylog('verbose', [f'[{pluginName}] Query: {query} '])            
+        cursor.execute (query) 
+        
+    # -----------------------------------------------------
+    # Cleanup Offline Devices
+    if HRS_TO_KEEP_OFFDEV != 0:
+        mylog('verbose', [f'[{pluginName}] Devices: Delete all New Devices older than {str(HRS_TO_KEEP_OFFDEV)} hours (HRS_TO_KEEP_OFFDEV setting)'])            
+        query = f"""DELETE FROM Devices WHERE devPresentLastScan = 0 AND devLastConnection < date('now', '-{str(HRS_TO_KEEP_OFFDEV)} hour'))"""
         mylog('verbose', [f'[{pluginName}] Query: {query} '])            
         cursor.execute (query) 
 
@@ -148,8 +157,8 @@ def cleanup_database (dbPath, DAYS_TO_KEEP_EVENTS, PHOLUS_DAYS_DATA, HRS_TO_KEEP
     # Clear New Flag
     if CLEAR_NEW_FLAG != 0:
         mylog('verbose', [f'[{pluginName}] Devices: Clear "New Device" flag for all devices older than {str(CLEAR_NEW_FLAG)} hours (CLEAR_NEW_FLAG setting)'])            
-        query = f"""UPDATE Devices SET dev_NewDevice = 0 WHERE dev_NewDevice = 1 AND date(dev_FirstConnection, '+{str(CLEAR_NEW_FLAG)} hour') < date('now')"""
-        #  select * from Devices where dev_NewDevice = 1 AND date(dev_FirstConnection, '+3 hour' ) < date('now') 
+        query = f"""UPDATE Devices SET devIsNew = 0 WHERE devIsNew = 1 AND date(devFirstConnection, '+{str(CLEAR_NEW_FLAG)} hour') < date('now')"""
+        #  select * from Devices where devIsNew = 1 AND date(devFirstConnection, '+3 hour' ) < date('now') 
         mylog('verbose', [f'[{pluginName}] Query: {query} '])            
         cursor.execute(query)
 

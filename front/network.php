@@ -19,7 +19,7 @@
   <?php require 'php/templates/notification.php'; ?>
     <h1 id="pageTitle">
       <i class="fa fa-network-wired"></i> <?= lang('Network_Title');?>
-      <span class="networkPageHelp"> <a target="_blank" href="https://github.com/jokob-sk/NetAlertX/blob/main/docs/NETWORK_TREE.md"><i class="fa fa-circle-question"></i></a><span>
+      <span class="helpIconSmallTopRight"> <a target="_blank" href="https://github.com/jokob-sk/NetAlertX/blob/main/docs/NETWORK_TREE.md"><i class="fa fa-circle-question"></i></a><span>
     </h1>    
   </section>
 
@@ -162,14 +162,14 @@
         }
 
         // Get all leafs connected to a node based on the node_mac        
-        $func_sql = 'SELECT dev_Network_Node_port as port,
-                            dev_MAC as mac,  
-                            dev_PresentLastScan as online, 
-                            dev_Name as name,
-                            dev_DeviceType as type, 
-                            dev_LastIP as last_ip,
-                            (select dev_DeviceType from Devices a where dev_MAC = "'.$node_mac.'") as node_type
-                        FROM Devices WHERE dev_Network_Node_MAC_ADDR = "'.$node_mac.'" order by port, name asc';
+        $func_sql = 'SELECT devParentPort as port,
+                            devMac as mac,  
+                            devPresentLastScan as online, 
+                            devName as name,
+                            devType as type, 
+                            devLastIP as last_ip,
+                            (select devType from Devices a where devMac = "'.$node_mac.'") as node_type
+                        FROM Devices WHERE devParentMAC = "'.$node_mac.'" order by port, name asc';
         
         global $db;
         $func_result = $db->query($func_sql);  
@@ -278,21 +278,21 @@
     $sql = "SELECT node_name, node_mac, online, node_type, node_ports_count, parent_mac, node_icon
             FROM 
             (
-                  SELECT  a.dev_Name as  node_name,        
-                        a.dev_MAC as node_mac,
-                        a.dev_PresentLastScan as online,
-                        a.dev_DeviceType as node_type,
-                        a.dev_Network_Node_MAC_ADDR as parent_mac,
-                        a.dev_Icon as node_icon
+                  SELECT  a.devName as  node_name,        
+                        a.devMac as node_mac,
+                        a.devPresentLastScan as online,
+                        a.devType as node_type,
+                        a.devParentMAC as parent_mac,
+                        a.devIcon as node_icon
                   FROM Devices a 
-                  WHERE a.dev_DeviceType in (".$networkDeviceTypes.")					
+                  WHERE a.devType in (".$networkDeviceTypes.")					
             ) t1
             LEFT JOIN
             (
-                  SELECT  b.dev_Network_Node_MAC_ADDR as node_mac_2,
+                  SELECT  b.devParentMAC as node_mac_2,
                         count() as node_ports_count 
                   FROM Devices b 
-                  WHERE b.dev_Network_Node_MAC_ADDR NOT NULL group by b.dev_Network_Node_MAC_ADDR
+                  WHERE b.devParentMAC NOT NULL group by b.devParentMAC
             ) t2
             ON (t1.node_mac = t2.node_mac_2);
           ";
@@ -360,15 +360,15 @@
 
     // Get all Unassigned / unconnected nodes 
     $func_sql = 'SELECT 
-                  dev_MAC AS mac,
-                  dev_PresentLastScan AS online,
-                  dev_Name AS name,
-                  dev_LastIP AS last_ip,
-                  dev_Network_Node_MAC_ADDR
+                  devMac AS mac,
+                  devPresentLastScan AS online,
+                  devName AS name,
+                  devLastIP AS last_ip,
+                  devParentMAC
                 FROM Devices
-                WHERE dev_Network_Node_MAC_ADDR IS NULL 
-                  OR dev_Network_Node_MAC_ADDR IN ("", " ", "undefined", "null")
-                  AND dev_MAC NOT LIKE "%internet%"
+                WHERE devParentMAC IS NULL 
+                  OR devParentMAC IN ("", " ", "undefined", "null")
+                  AND devMac NOT LIKE "%internet%"
                 ORDER BY name ASC;'; 
 
     global $db;
@@ -481,21 +481,31 @@
       return;
     }
 
-    devicesListnew = rawData["data"].map(item =>  { return {
-                                                            "name":item[0], 
-                                                            "type":item[2], 
-                                                            "icon":item[3], 
-                                                            "mac":item[11], 
-                                                            "parentMac":item[14], 
-                                                            "rowid":item[13], 
-                                                            "status":item[10],
-                                                            "childrenQty":item[15],
-                                                            "port":item[18]                                                              
-                                                            }})
+    devicesListnew = rawData["data"].map(item =>  { 
+      return {
+          "name": item[0], 
+          "type": item[2], 
+          "icon": item[3], 
+          "mac": item[11], 
+          "parentMac": item[14], 
+          "rowid": item[13], 
+          "status": item[10],
+          "childrenQty": item[15],
+          "port": item[18]
+        };
+    }).sort((a, b) => {
+        // First sort by name alphabetically
+        const nameCompare = a.name.localeCompare(b.name);
+        if (nameCompare !== 0) {
+            return nameCompare;
+        }
+        // If names are the same, sort by port numerically
+        return a.port - b.port;
+    });
 
-    setCache('devicesListNew', JSON.stringify(devicesListnew))
+    setCache('devicesListNew', JSON.stringify(devicesListnew));
 
-    // init global variable
+    // Init global variable
     deviceListGlobal = devicesListnew;
 
     
@@ -525,52 +535,56 @@
   
 
   // ---------------------------------------------------------------------------
-  function getChildren(node, list, path)
+  // Recursively get children nodes and build a tree
+  function getChildren(node, list, path, visited = [])
   {
-    var children = [];
+      var children = [];
 
-    // loop thru all items and find childern...
-    for(var i in list)
-    {
-      //... of the current node
-      
-      if(list[i].parentMac.toLowerCase() == node.mac.toLowerCase() && !hiddenMacs.includes(list[i].parentMac))
-      {   
-
-        visibleNodesCount++
-
-        // and process them 
-        children.push(getChildren(list[i], list, path + ((path == "") ? "" : '|') + list[i].parentMac, hiddenMacs))
-
+      // Check for infinite recursion by seeing if the node has been visited before
+      if (visited.includes(node.mac.toLowerCase())) {
+          console.error("Infinite recursion detected at node:", node.mac);
+          write_notification("[ERROR] ⚠ Infinite recursion detected. You probably have assigned the Internet node to another children node or to itself. Please open a new issue on GitHub and describe how you did it.", 'interrupt')
+          return { error: "Infinite recursion detected", node: node.mac };
       }
-    }
 
-    // note the total number of leaf nodes to calculate the font scaling
-    if(children.length == 0) 
-    { 
-      leafNodesCount++ 
-    } else
-    {
-      parentNodesCount++
-    }  
-    
-    return { 
-      name: node.name,      
-      path: path,
-      mac: node.mac,
-      port: node.port,
-      id: node.mac,
-      parentMac: node.parentMac,
-      icon: node.icon,
-      type: node.type,
-      status: node.status,
-      hasChildren: children.length > 0 || hiddenMacs.includes(node.mac),
-      hiddenChildren: hiddenMacs.includes(node.mac),
-      qty: children.length,
-      children:  children
-    };
-        
+      // Add current node to visited list
+      visited.push(node.mac.toLowerCase());
+
+      // Loop through all items to find children of the current node
+      for (var i in list) {
+          if (list[i].parentMac.toLowerCase() == node.mac.toLowerCase() && !hiddenMacs.includes(list[i].parentMac)) {   
+
+              visibleNodesCount++;
+
+              // Process children recursively, passing a copy of the visited list
+              children.push(getChildren(list[i], list, path + ((path == "") ? "" : '|') + list[i].parentMac, visited));
+          }
+      }
+
+      // Track leaf and parent node counts
+      if (children.length == 0) {
+          leafNodesCount++;
+      } else {
+          parentNodesCount++;
+      }
+
+      return { 
+          name: node.name,
+          path: path,
+          mac: node.mac,
+          port: node.port,
+          id: node.mac,
+          parentMac: node.parentMac,
+          icon: node.icon,
+          type: node.type,
+          status: node.status,
+          hasChildren: children.length > 0 || hiddenMacs.includes(node.mac),
+          hiddenChildren: hiddenMacs.includes(node.mac),
+          qty: children.length,
+          children: children
+      };
   }
+
 
   // ---------------------------------------------------------------------------
   

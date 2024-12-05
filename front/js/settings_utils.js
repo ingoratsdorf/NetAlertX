@@ -215,14 +215,14 @@ function settingsCollectedCorrectly(settingsArray, settingsJSON_DB) {
     }
   });
 
-  const settingsCodeNames = settingsJSON_DB.map((setting) => setting.Code_Name);
+  const settingsCodeNames = settingsJSON_DB.map((setting) => setting.setKey);
   const detailedCodeNames = settingsArray.map((item) => item[1]);
 
   const missingCodeNamesOnPage = detailedCodeNames.filter(
-    (codeName) => !settingsCodeNames.includes(codeName)
+    (setKey) => !settingsCodeNames.includes(setKey)
   );
   const missingCodeNamesInDB = settingsCodeNames.filter(
-    (codeName) => !detailedCodeNames.includes(codeName)
+    (setKey) => !detailedCodeNames.includes(setKey)
   );
 
   // check if the number of settings on the page and in the DB are the same
@@ -453,11 +453,11 @@ function filterRows(inputText) {
         }
   
         var description = $row.find(".setting_description").text().toLowerCase();
-        var codeName = $row.find(".setting_name code").text().toLowerCase();
+        var setKey = $row.find(".setting_name code").text().toLowerCase();
   
         if (
           description.includes(inputText.toLowerCase()) ||
-          codeName.includes(inputText.toLowerCase())
+          setKey.includes(inputText.toLowerCase())
         ) {
           $row.show();
           anyVisible = true; // Set the flag to true if at least one row is visible
@@ -554,7 +554,7 @@ function overrideToggle(element) {
 
 // Generate options or set options based on the provided parameters
 function generateOptionsOrSetOptions(
-  codeName,
+  setKey,
   valuesArray, // Array of values to be pre-selected in the dropdown
   placeholder, // ID of the HTML element where dropdown should be rendered (will be replaced)
   processDataCallback, // Callback function to generate entries based on options
@@ -562,10 +562,10 @@ function generateOptionsOrSetOptions(
   transformers = [] // Transformers to be applied to the values
 ) {
 
-  // console.log(codeName);
+  // console.log(setKey);
 
   // NOTE {value} options to replace with a setting or SQL value are handled in the cacheSettings() function
-  options = arrayToObject(createArray(getSettingOptions(codeName)))
+  options = arrayToObject(createArray(getSettingOptions(setKey)))
 
   // Call to render lists
   renderList(
@@ -638,7 +638,7 @@ function reverseTransformers(val, transformers) {
 
 // ------------------------------------------------------------
 // Function to initialize relevant variables based on HTML element
-const handleElementOptions = (codeName, elementOptions, transformers, val) => {
+const handleElementOptions = (setKey, elementOptions, transformers, val) => {
   let inputType = "text";
   let readOnly = "";
   let isMultiSelect = false;
@@ -687,7 +687,7 @@ const handleElementOptions = (codeName, elementOptions, transformers, val) => {
     }
     if (option.sourceSuffixes) {
       $.each(option.sourceSuffixes, function (index, suf) {
-        sourceIds.push(codeName + suf);
+        sourceIds.push(setKey + suf);
       });
     }
     if (option.separator) {
@@ -859,3 +859,164 @@ function genListWithInputSet(options, valuesArray, targetField, transformers, pl
   // Place the resulting HTML into the specified placeholder div
   $("#" + placeholder).replaceWith(listHtml);
 }
+
+
+// ------------------------------------------------------------------------------
+// Generate the form control for setting
+function generateFormHtml(set, overrideValue) {
+  let inputHtml = '';
+
+
+  isEmpty(overrideValue) ? inVal = set['setValue'] : inVal = overrideValue;  
+  const setKey = set['setKey'];
+  const setType = set['setType'];
+
+  // console.log(setType);
+  // console.log(setKey);
+  // console.log(overrideValue);
+  // console.log(inVal);
+  
+
+  // Parse the setType JSON string
+  const setTypeObject = JSON.parse(setType.replace(/'/g, '"'));
+  const dataType = setTypeObject.dataType;
+  const elements = setTypeObject.elements || [];
+
+  // Generate HTML for elements
+  elements.forEach(elementObj => {
+    const { elementType, elementOptions = [], transformers = [] } = elementObj;
+
+    // Handle element options
+    const {
+      inputType,
+      readOnly,
+      isMultiSelect,
+      isOrdeable,
+      cssClasses,
+      placeholder,
+      suffix,
+      sourceIds,
+      separator,
+      editable,
+      valRes,
+      getStringKey,
+      onClick,
+      onChange,
+      customParams,
+      customId
+    } = handleElementOptions(setKey, elementOptions, transformers, inVal);
+
+    // Override value
+    const val = valRes;
+
+    // console.log(val);
+    
+
+    // Generate HTML based on elementType
+    switch (elementType) {
+      case 'select':
+        const multi = isMultiSelect ? "multiple" : "";
+        const addCss = isOrdeable ? "select2 select2-hidden-accessible" : "";
+
+        inputHtml += `<select onChange="settingsChanged();${onChange}" 
+                              my-data-type="${dataType}" 
+                              my-editable="${editable}" 
+                              class="form-control ${addCss}" 
+                              name="${setKey}" 
+                              id="${setKey}" 
+                              my-customparams="${customParams}" 
+                              my-customid="${customId}" 
+                              ${multi}>
+                          <option value="" id="${setKey + "_temp_"}"></option>
+                        </select>`;
+
+        generateOptionsOrSetOptions(setKey, createArray(val), `${setKey}_temp_`, generateOptions, null, transformers);
+        break;
+
+      case 'input':
+        const checked = val === 'True' || val === '1' ? 'checked' : '';
+        const inputClass = inputType === 'checkbox' ? 'checkbox' : 'form-control';
+
+        inputHtml += `<input 
+                        class="${inputClass} ${cssClasses}" 
+                        onChange="settingsChanged();${onChange}" 
+                        my-data-type="${dataType}" 
+                        my-customparams="${customParams}" 
+                        my-customid="${customId}" 
+                        id="${setKey}${suffix}" 
+                        type="${inputType}" 
+                        value="${val}" 
+                        ${readOnly}
+                        ${checked}
+                        placeholder="${placeholder}" 
+                      />`;
+        break;
+
+      case 'button':
+        inputHtml += `<button 
+                        class="btn btn-primary ${cssClasses}" 
+                        my-customparams="${customParams}" 
+                        my-customid="${customId}" 
+                        my-input-from="${sourceIds}" 
+                        my-input-to="${setKey}" 
+                        onclick="${onClick}">
+                        ${getString(getStringKey)}
+                      </button>`;
+        break;
+
+      case 'textarea':
+        inputHtml += `<textarea 
+                        class="form-control input" 
+                        my-customparams="${customParams}" 
+                        my-customid="${customId}" 
+                        my-data-type="${dataType}" 
+                        id="${setKey}" 
+                        ${readOnly}>${val}</textarea>`;
+        break;
+
+      case 'span':
+        inputHtml += `<span 
+                        class="${cssClasses}" 
+                        my-data-type="${dataType}" 
+                        my-customparams="${customParams}" 
+                        my-customid="${customId}">
+                        ${getString(getStringKey)}
+                      </span>`;
+        break;
+
+      default:
+        console.warn(`🟥 Unknown element type: ${elementType}`);
+    }
+  });
+
+  // Generate event HTML if applicable
+  let eventsHtml = '';
+
+  // console.log(setTypeObject);
+  
+  // console.log(set);
+ 
+  const eventsList = createArray(set['setEvents']); 
+  // inline buttons events
+  
+
+  if (eventsList.length > 0) {
+    eventsList.forEach(event => {
+
+        eventsHtml += `<span class="input-group-addon pointer"
+                        id="${`${event}_${setKey}`}"
+                        data-myparam-setkey="${setKey}"
+                        data-myparam="${setKey}"
+                        data-myparam-plugin="${setTypeObject.prefix || ''}"
+                        data-myevent="${event}"  
+                        onclick="execute_settingEvent(this)">
+                        <i title="${getString(event + "_event_tooltip")}" class="fa ${getString(event + "_event_icon")}"></i>
+                      </span>`;
+    });
+  }
+
+  // Combine and return the final HTML
+  return inputHtml + eventsHtml;
+}
+
+

@@ -4,7 +4,7 @@ import subprocess
 import conf
 import os
 import re
-from helper import timeNowTZ, get_setting, get_setting_value, list_to_where, resolve_device_name_dig, resolve_device_name_pholus, get_device_name_nbtlookup, get_device_name_nslookup, get_device_name_mdns, check_IP_format, sanitize_SQL_input
+from helper import timeNowTZ, get_setting, get_setting_value, list_to_where, resolve_device_name_dig, get_device_name_nbtlookup, get_device_name_nslookup, get_device_name_mdns, check_IP_format, sanitize_SQL_input
 from logger import mylog, print_log
 from const import vendorsPath, vendorsPathNewest, sql_generateGuid
 
@@ -317,7 +317,7 @@ def update_devices_data_from_scan (db):
                     WHERE EXISTS (SELECT 1 FROM CurrentScan
                                   WHERE devMac = cur_MAC) """)
 
-    # Update only devices with empty or NULL vendors
+    # Update only devices with empty, NULL or (u(U)nknown) vendors
     mylog('debug', '[Update Devices] - cur_Vendor -> (if empty) devVendor')
     sql.execute("""UPDATE Devices
                     SET devVendor = (
@@ -326,7 +326,7 @@ def update_devices_data_from_scan (db):
                         WHERE Devices.devMac = CurrentScan.cur_MAC
                     )
                     WHERE 
-                        (devVendor IS NULL OR devVendor IN ("", "null"))
+                        (devVendor IS NULL OR devVendor IN ("", "null", "(unknown)", "(Unknown)"))
                         AND EXISTS (
                             SELECT 1
                             FROM CurrentScan
@@ -439,8 +439,8 @@ def update_devices_data_from_scan (db):
     # Update VENDORS
     recordsToUpdate = []
     query = """SELECT * FROM Devices
-               WHERE devVendor = '(unknown)' OR devVendor =''
-                  OR devVendor IS NULL"""
+               WHERE devVendor IS NULL OR devVendor IN ("", "null", "(unknown)", "(Unknown)")
+            """
 
     for device in sql.execute (query) :
         vendor = query_MAC_vendor (device['devMac'])
@@ -452,11 +452,18 @@ def update_devices_data_from_scan (db):
     
     # Guess ICONS
     recordsToUpdate = []
-    query = """SELECT * FROM Devices
-               WHERE devIcon in ('', 'null')
-                  OR devIcon IS NULL"""
+
     default_icon = get_setting_value('NEWDEV_devIcon')
-    
+ 
+    if get_setting_value('NEWDEV_replace_preset_icon'):
+        query = f"""SELECT * FROM Devices
+                    WHERE devIcon in ('', 'null', '{default_icon}')
+                        OR devIcon IS NULL"""
+    else:
+        query = """SELECT * FROM Devices
+                    WHERE devIcon in ('', 'null')
+                        OR devIcon IS NULL"""
+            
     for device in sql.execute (query) :
         # Conditional logic for devIcon guessing       
         devIcon = guess_icon(device['devVendor'], device['devMac'], device['devLastIP'], device['devName'], default_icon)
@@ -469,8 +476,8 @@ def update_devices_data_from_scan (db):
     # Guess Type
     recordsToUpdate = []
     query = """SELECT * FROM Devices
-               WHERE devType in ('', 'null')
-                  OR devType IS NULL"""
+                    WHERE devType in ('', 'null')
+                OR devType IS NULL"""
     default_type = get_setting_value('NEWDEV_devType')
     
     for device in sql.execute (query) :
@@ -501,7 +508,6 @@ def update_devices_names (db):
     foundmDNSLookup = 0
     foundNsLookup = 0
     foundNbtLookup = 0
-    foundPholus = 0
 
     # Gen unknown devices
     sql.execute ("SELECT * FROM Devices WHERE devName IN ('(unknown)','', '(name not found)') AND devLastIP <> '-'")
@@ -514,15 +520,6 @@ def update_devices_names (db):
 
     # Devices without name
     mylog('verbose', f'[Update Device Name] Trying to resolve devices without name. Unknown devices count: {len(unknownDevices)}')
-
-    # get names from Pholus scan 
-    sql.execute ('SELECT * FROM Pholus_Scan where "Record_Type"="Answer"')    
-    pholusResults = list(sql.fetchall())        
-    db.commitDB()
-
-    # Number of entries from previous Pholus scans
-    mylog('verbose', ['[Update Device Name] Pholus entries from prev scans: ', len(pholusResults)])
-
 
     for device in unknownDevices:
         newName = nameNotFound
@@ -548,26 +545,12 @@ def update_devices_names (db):
             if newName != nameNotFound:
                foundNsLookup += 1
                
-        # Resolve device name with NSLOOKUP plugin data
+        # Resolve device name with NBTLOOKUP plugin data
         if newName == nameNotFound:
             newName = get_device_name_nbtlookup(db, device['devMac'], device['devLastIP'])
 
             if newName != nameNotFound:
                foundNbtLookup += 1
-
-
-        # Resolve with Pholus 
-        if newName == nameNotFound:
-
-            # Try MAC matching
-            newName =  resolve_device_name_pholus (device['devMac'], device['devLastIP'], pholusResults, nameNotFound, False)
-            # Try IP matching 
-            if newName == nameNotFound:
-                newName =  resolve_device_name_pholus (device['devMac'], device['devLastIP'], pholusResults, nameNotFound, True)
-
-            # count
-            if newName != nameNotFound:
-                foundPholus += 1
         
         # if still not found update name so we can distinguish the devices where we tried already
         if newName == nameNotFound :
@@ -579,11 +562,11 @@ def update_devices_names (db):
             if device['devName'] != nameNotFound:
                 recordsNotFound.append (["(name not found)", device['devMac']])          
         else:
-            # name was found with DiG or Pholus
+            # name was found 
             recordsToUpdate.append ([newName, device['devMac']])
 
     # Print log            
-    mylog('verbose', [f'[Update Device Name] Names Found (DiG/mDNS/NSLOOKUP/NBTSCAN/Pholus): {len(recordsToUpdate)} ({foundDig}/{foundmDNSLookup}/{foundNsLookup}/{foundNbtLookup}/{foundPholus})'] )                 
+    mylog('verbose', [f'[Update Device Name] Names Found (DiG/mDNS/NSLOOKUP/NBTSCAN): {len(recordsToUpdate)} ({foundDig}/{foundmDNSLookup}/{foundNsLookup}/{foundNbtLookup})'] )                 
     mylog('verbose', [f'[Update Device Name] Names Not Found         : {notFound}'] )    
      
     # update not found devices with (name not found) 
@@ -634,7 +617,7 @@ def query_MAC_vendor (pMAC):
             for line in f:
                 line_lower = line.lower()  # Convert line to lowercase for case-insensitive matching
                 if line_lower.startswith(mac_start_string6):                 
-                    parts = line.split(' ', 1)
+                    parts = line.split('\t', 1)
                     if len(parts) > 1:
                         vendor = parts[1].strip()
                         mylog('debug', [f"[Vendor Check] Found '{vendor}' for '{pMAC}' in {vendorsPath}"])

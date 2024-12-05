@@ -124,19 +124,19 @@ function cacheSettings()
 
           settingsData.forEach((set) => {  
 
-            resolvedOptions = createArray(set.Options)
+            resolvedOptions = createArray(set.setOptions)
             resolvedOptionsOld = resolvedOptions
             setPlugObj     = {};
             options_params = [];
             resolved = ""
           
             // proceed only if first option item contains something to resolve
-            if( !set.Code_Name.includes("__metadata") && 
+            if( !set.setKey.includes("__metadata") && 
                 resolvedOptions.length != 0 && 
                 resolvedOptions[0].includes("{value}"))
             {
               // get setting definition from the plugin config if available
-              setPlugObj = getPluginSettingObject(pluginsData, set.Code_Name)
+              setPlugObj = getPluginSettingObject(pluginsData, set.setKey)
 
               // check if options contains parameters and resolve 
               if(setPlugObj != {} && setPlugObj["options_params"])
@@ -161,8 +161,8 @@ function cacheSettings()
               }    
             }
 
-            setCache(`pia_set_${set.Code_Name}`, set.Value)             
-            setCache(`pia_set_opt_${set.Code_Name}`, resolvedOptions) 
+            setCache(`nax_set_${set.setKey}`, set.setValue)             
+            setCache(`nax_set_opt_${set.setKey}`, resolvedOptions) 
           });
         }).then(() => handleSuccess('cacheSettings', resolve())).catch(() => handleFailure('cacheSettings', reject("cacheSettings already completed")));    // handle AJAX synchronization
       })
@@ -177,7 +177,7 @@ function getSettingOptions (key) {
   // handle initial load to make sure everything is set-up and cached
   // handleFirstLoad()
  
-  result = getCache(`pia_set_opt_${key}`, true);
+  result = getCache(`nax_set_opt_${key}`, true);
 
   if (result == "")
   {
@@ -195,7 +195,7 @@ function getSetting (key) {
   // handle initial load to make sure everything is set-up and cached
   // handleFirstLoad()
  
-  result = getCache(`pia_set_${key}`, true);
+  result = getCache(`nax_set_${key}`, true);
 
   if (result == "")
   {
@@ -689,6 +689,15 @@ function openUrl(urls) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// force load URL in current window with specific anchor
+function forceLoadUrl(relativeUrl) {
+
+  window.location.replace(relativeUrl);
+  window.location.reload()  
+  
+}
+
 
 // -----------------------------------------------------------------------------
 function navigateToDeviceWithIp (ip) {
@@ -714,7 +723,7 @@ function navigateToDeviceWithIp (ip) {
 
 // -----------------------------------------------------------------------------
 function getNameByMacAddress(macAddress) {
-  return getDeviceDataByMac(macAddress, "devName")
+  return getDevDataByMac(macAddress, "devName")
 }
 
 // -----------------------------------------------------------------------------
@@ -750,6 +759,12 @@ function isValidIPv6(ipAddress) {
 
   return ipv6Regex.test(ipAddress);
 }
+
+function isValidIPv4(ip) {
+  const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  return ipv4Regex.test(ip);
+}
+
 
 function formatIPlong(ipAddress) {
   if (ipAddress.includes(':') && isValidIPv6(ipAddress)) {
@@ -815,7 +830,11 @@ function isRandomMAC(mac)
     // Empty array
     if (input === '[]' || input === '') {
       return [];
-    } 
+    }
+    // handle integer 
+    if (typeof input === 'number') {
+      input = input.toString();
+    }
   
     // Regex pattern for brackets
     const patternBrackets = /(^\s*\[)|(\]\s*$)/g;
@@ -867,7 +886,7 @@ function isRandomMAC(mac)
 // -----------------------------------------------------------------------------
 // A function to get a device property using the mac address as key and DB column nakme as parameter
 //  for the value to be returned
-function getDeviceDataByMac(macAddress, dbColumn) {
+function getDevDataByMac(macAddress, dbColumn) {
 
   const sessionDataKey = 'devicesListAll_JSON';  
   const devicesCache = getCache(sessionDataKey);
@@ -970,6 +989,19 @@ function getGuid() {
 // -----------------------------------------------------------------------------
 //  Loading Spinner overlay
 // -----------------------------------------------------------------------------
+spinnerHtml = `
+    <!-- spinner -->
+    <div id="loadingSpinner" style="display: block">
+      <div class="pa_semitransparent-panel"></div>
+      <div class="panel panel-default pa_spinner">
+        <table>
+          <td width="130px" align="middle">_text_</td>
+          <td><i class="ion ion-ios-loop-strong fa-spin fa-2x fa-fw"></td>
+        </table>
+      </div>
+    </div>
+    `
+
 function showSpinner(stringKey='Loading')
 {
 
@@ -988,20 +1020,7 @@ function showSpinner(stringKey='Loading')
     $("#loadingSpinner").show();
   }
   else{    
-    html =  `
-    <!-- spinner -->
-    <div id="loadingSpinner" style="display: block">
-      <div class="pa_semitransparent-panel"></div>
-      <div class="panel panel-default pa_spinner">
-        <table>
-          <td width="130px" align="middle">${text}</td>
-          <td><i class="ion ion-ios-loop-strong fa-spin fa-2x fa-fw"></td>
-        </table>
-      </div>
-    </div>
-    `
-
-    $(".wrapper").append(html)
+    $(".wrapper").append(spinnerHtml.replace('_text_',text))
   }
 }
 // -----------------------------------------------------------------------------
@@ -1160,9 +1179,9 @@ function arraysContainSameValues(arr1, arr2) {
 
 // -----------------------------------------------------------------------------
 // Hide elements on the page based on the supplied setting
-function hideUIelements(settingKey) {
+function hideUIelements(setKey) {
 
-  hiddenSectionsSetting = getSetting(settingKey)
+  hiddenSectionsSetting = getSetting(setKey)
   
   if(hiddenSectionsSetting != "") // handle if settings not yet initialized
   {
@@ -1186,6 +1205,40 @@ function hideUIelements(settingKey) {
 
 }
 
+// ------------------------------------------------------------
+function getDevicesList()
+{
+  // Read cache (skip cookie expiry check)
+  devicesList = getCache('devicesListAll_JSON', true);
+  
+  if (devicesList != '') {
+      devicesList = JSON.parse (devicesList);
+  } else {
+      devicesList = [];
+  }
+
+  // only loop thru the filtered down list
+  visibleDevices = getCache("ntx_visible_macs")
+
+  if(visibleDevices != "") {
+    visibleDevicesMACs = visibleDevices.split(',');
+
+    devicesList_tmp = [];
+
+    // Iterate through the data and filter only visible devices
+    $.each(devicesList, function(index, item) {
+      // Check if the current item's MAC exists in visibleDevicesMACs
+      if (visibleDevicesMACs.includes(item.devMac)) {
+        devicesList_tmp.push(item);
+      }
+    });
+
+    // Update devicesList with the filtered items
+    devicesList = devicesList_tmp;
+  }
+
+  return devicesList;
+}
 
 
 // -----------------------------------------------------------------------------
@@ -1260,39 +1313,75 @@ async function handleFirstLoad(callback) {
 }
 
 // -----------------------------------------------------------------------------
-// Execute callback once app initialized
-function callAfterAppInitialized(callback) {
-  if (!isAppInitialized()) {
+// Execute callback once the app is initialized and GraphQL server is running
+async function callAfterAppInitialized(callback) {
+  if (!isAppInitialized() || !(await isGraphQLServerRunning())) {
     setTimeout(() => {
-      callAfterAppInitialized(callback)
+      callAfterAppInitialized(callback);
     }, 500);
-  } else
-  {
+  } else {
     callback();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Polling function to repeatedly check if the server is running
+async function waitForGraphQLServer() {
+  const pollInterval = 2000; // 2 seconds between each check
+  let serverRunning = false;
+
+  while (!serverRunning) {
+    serverRunning = await isGraphQLServerRunning();
+    if (!serverRunning) {
+      console.log("GraphQL server not running, retrying in 2 seconds...");
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+  }
+
+  console.log("GraphQL server is now running.");
+}
+
+// -----------------------------------------------------------------------------
+// Returns 1 if running, 0 otherwise
+async function isGraphQLServerRunning() {
+  try {
+    const response = await $.get('api/app_state.json?nocache=' + Date.now());
+    console.log("graphQLServerStarted: " + response["graphQLServerStarted"]);
+    setCache("graphQLServerStarted", response["graphQLServerStarted"]);
+    return response["graphQLServerStarted"];
+  } catch (error) {
+    console.error("Failed to check GraphQL server status:", error);
+    return false;
   }
 }
 
 // -----------------------------------------------------------------------------
 // Check if the code has been executed before by checking sessionStorage
 function isAppInitialized() {
-  //  return arraysContainSameValues(getCache("completedCalls").split(',').filter(Boolean), completedCalls_final);
 
-  // loading settings + 1 (or 2 language files if not english) + device cache.
-  completedCallsCount_final = getLangCode() == 'en_us' ? 3  : 4 ;
+  completedCalls = parseInt(getCache("completedCallsCount"));
+  shouldBeCompletedCalls = getLangCode() == 'en_us' ? 3 : 4;
 
-  return (parseInt(getCache("completedCallsCount")) >=  completedCallsCount_final);
+  return (
+    completedCalls >= shouldBeCompletedCalls
+  );
 }
 
-// Define a function that will execute the code only once
+// -----------------------------------------------------------------------------
+// Main execution logic
 async function executeOnce() {
   showSpinner();
 
   if (!isAppInitialized()) {
     try {
+      console.log("HERE");
+      
+      await waitForGraphQLServer(); // Wait for the server to start
+
       await cacheDevices();
       await cacheSettings();
-      await cacheStrings();     
-      
+      await cacheStrings();
+
       console.log("✅ All AJAX callbacks have completed");
       onAllCallsComplete();
     } catch (error) {
@@ -1300,6 +1389,7 @@ async function executeOnce() {
     }
   }
 }
+
 
 // -----------------------------------------------------------------------------
 // Function to handle successful completion of an AJAX call

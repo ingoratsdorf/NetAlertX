@@ -30,7 +30,7 @@
   <!-- ----------------------------------------------------------------------- -->
   <!-- REQUIRED JS SCRIPTS -->
   <!-- jQuery 3 -->
-  <script src="lib/AdminLTE/bower_components/jquery/dist/jquery.min.js"></script>
+  <script src="lib/jquery/jquery.min.js"></script>
 
   <script src="js/common.js?v=<?php include 'php/templates/version.php'; ?>"></script>
   <script src="js/modal.js?v=<?php include 'php/templates/version.php'; ?>"></script>
@@ -39,17 +39,19 @@
   <script src="js/settings_utils.js?v=<?php include 'php/templates/version.php'; ?>"></script>
 
   <!-- Bootstrap 3.3.7 -->
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="lib/bootstrap/bootstrap.min.css">
   
+  <!-- iCheck -->
+  <script src="lib/iCheck/icheck.min.js"></script>
 
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/fontawesome.min.css">
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/solid.css">
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/brands.css">
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/font-awesome/css/v5-font-face.css">
+  <link rel="stylesheet" href="lib/font-awesome/fontawesome.min.css">
+  <link rel="stylesheet" href="lib/font-awesome/solid.css">
+  <link rel="stylesheet" href="lib/font-awesome/brands.css">
+  <link rel="stylesheet" href="lib/font-awesome/v5-font-face.css">
 
   <!-- Ionicons -->
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/Ionicons/css/ionicons.min.css">
+  <link rel="stylesheet" href="lib/Ionicons/ionicons.min.css">
 
   <!-- Theme style -->
   <link rel="stylesheet" href="lib/AdminLTE/dist/css/AdminLTE.min.css">
@@ -255,28 +257,28 @@
           </a>
           <ul class="treeview-menu" style="display: <?php if (in_array (basename($_SERVER['SCRIPT_NAME']), array('devices.php', 'deviceDetails.php') ) ){ echo 'block'; } else {echo 'none';} ?>;">
             <li>
-              <a href="devices.php#my" onclick="initializeDatatable('my')" >  <?= lang("Device_Shortcut_AllDevices");?> </a>
+              <a href="devices.php#my_devices" onclick="forceLoadUrl('devices.php#my_devices')" >  <?= lang("Device_Shortcut_AllDevices");?> </a>
             </li>
             <li>
-              <a href="devices.php#connected" onclick="initializeDatatable('connected')" >  <?= lang("Device_Shortcut_Connected");?> </a>
+              <a href="devices.php#connected" onclick="forceLoadUrl('devices.php#connected')" >  <?= lang("Device_Shortcut_Connected");?> </a>
             </li>
             <li>
-              <a href="devices.php#favorites" onclick="initializeDatatable('favorites')" > <?= lang("Device_Shortcut_Favorites");?> </a>
+              <a href="devices.php#favorites" onclick="forceLoadUrl('devices.php#favorites')" > <?= lang("Device_Shortcut_Favorites");?> </a>
             </li>
             <li>
-              <a href="devices.php#new" onclick="initializeDatatable('new')"  >  <?= lang("Device_Shortcut_NewDevices");?> </a>
+              <a href="devices.php#new" onclick="forceLoadUrl('devices.php#new')" >  <?= lang("Device_Shortcut_NewDevices");?> </a>
             </li>
             <li>
-              <a href="devices.php#down" onclick="initializeDatatable('down')" >  <?= lang("Device_Shortcut_DownOnly");?> </a>
+              <a href="devices.php#down" onclick="forceLoadUrl('devices.php#down')" >  <?= lang("Device_Shortcut_DownOnly");?> </a>
             </li>
             <li>
-              <a href="devices.php#offline" onclick="initializeDatatable('offline')" > <?= lang("Gen_Offline");?> </a>
+              <a href="devices.php#offline" onclick="forceLoadUrl('devices.php#offline')" > <?= lang("Gen_Offline");?> </a>
             </li>
             <li>
-              <a href="devices.php#archived" onclick="initializeDatatable('archived')" >  <?= lang("Device_Shortcut_Archived");?> </a>
+              <a href="devices.php#archived" onclick="forceLoadUrl('devices.php#archived')" >  <?= lang("Device_Shortcut_Archived");?> </a>
             </li>
-            
           </ul>
+
         </li>
 
         <!-- Monitoring menu item -->

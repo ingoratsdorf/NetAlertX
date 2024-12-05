@@ -17,6 +17,7 @@ import base64
 import hashlib
 import random
 import string
+import ipaddress
 
 
 import conf
@@ -56,8 +57,9 @@ def get_timezone_offset():
 # App state
 #-------------------------------------------------------------------------------
 # A class to manage the application state and to provide a frontend accessible API point
+# To keep an existing value pass None
 class app_state_class:
-    def __init__(self, currentState, settingsSaved=None, settingsImported=None, showSpinner=False):
+    def __init__(self, currentState, settingsSaved=None, settingsImported=None, showSpinner=False, graphQLServerStarted=0):
         # json file containing the state to communicate with the frontend
         stateFile = apiPath + '/app_state.json'
         previousState = ""
@@ -77,19 +79,21 @@ class app_state_class:
                 mylog('none', [f'[app_state_class] Failed to handle app_state.json: {e}'])
                  
 
-        # Check if the file exists and init values
+        # Check if the file exists and recover previous values
         if previousState != "":            
             self.settingsSaved          = previousState.get("settingsSaved", 0)
             self.settingsImported       = previousState.get("settingsImported", 0)
             self.showSpinner            = previousState.get("showSpinner", False)
             self.isNewVersion           = previousState.get("isNewVersion", False)
             self.isNewVersionChecked    = previousState.get("isNewVersionChecked", 0)
-        else:
+            self.graphQLServerStarted   = previousState.get("graphQLServerStarted", 0)
+        else: # init first time values
             self.settingsSaved          = 0
             self.settingsImported       = 0
             self.showSpinner            = False
             self.isNewVersion           = checkNewVersion()
             self.isNewVersionChecked    = int(timeNow().timestamp())
+            self.graphQLServerStarted   = 0
 
         # Overwrite with provided parameters if supplied
         if settingsSaved is not None:
@@ -98,6 +102,8 @@ class app_state_class:
             self.settingsImported = settingsImported
         if showSpinner is not None:
             self.showSpinner = showSpinner
+        if graphQLServerStarted is not None:
+            self.graphQLServerStarted = graphQLServerStarted
 
         # check for new version every hour and if currently not running new version
         if self.isNewVersion is False and self.isNewVersionChecked + 3600 < int(timeNow().timestamp()):
@@ -114,7 +120,7 @@ class app_state_class:
             with open(stateFile, 'w') as json_file:
                 json_file.write(json_data)
         except (TypeError, ValueError) as e:
-            mylog('none', [f'[app_state_class] Failed to serialize object to JSON: {e}'])
+            mylog('none', [f'[app_state_class] Failed to serialize object to JSON: {e}'])        
 
 
          
@@ -130,9 +136,9 @@ class app_state_class:
 
 #-------------------------------------------------------------------------------
 # method to update the state
-def updateState(newState, settingsSaved = None, settingsImported = None, showSpinner = False):
+def updateState(newState, settingsSaved = None, settingsImported = None, showSpinner = False, graphQLServerStarted = None):
 
-    state = app_state_class(newState, settingsSaved, settingsImported, showSpinner)
+    return app_state_class(newState, settingsSaved, settingsImported, showSpinner, graphQLServerStarted)
 
 
 #-------------------------------------------------------------------------------
@@ -286,7 +292,7 @@ def get_setting(key):
             data = json.load(json_file)
 
             for item in data.get("data",[]):
-                if item.get("Code_Name") == key:
+                if item.get("setKey") == key:
                     return item
 
             mylog('debug', [f'[Settings] ⚠ ERROR - setting_missing - Setting not found for key: {key} in file {settingsFile}'])  
@@ -321,8 +327,8 @@ def get_setting_value(key):
         set_type  = 'Error: Not handled'
         set_value = 'Error: Not handled'
 
-        set_value = setting["Value"]  # Setting value (Value (upper case) = user overridden default_value)
-        set_type = setting["Type"]  # Setting type  # lower case "type" - default json value vs uppper-case "Type" (= from user defined settings)
+        set_value = setting["setValue"]  # Setting value (Value (upper case) = user overridden default_value)
+        set_type = setting["setType"]  # Setting type  # lower case "type" - default json value vs uppper-case "setType" (= from user defined settings)
 
         value = setting_value_to_python_type(set_type, set_value)
 
@@ -366,7 +372,7 @@ def setting_value_to_python_type(set_type, set_value):
     transformers    = element_with_input_value.get('transformers', [])
 
     # Convert value based on dataType and elementType
-    if dataType == 'string' and elementType in ['input', 'select']:
+    if dataType == 'string' and elementType in ['input', 'select', 'textarea']:
         value = reverseTransformers(str(set_value), transformers)
 
     elif dataType == 'integer' and (elementType == 'input' or elementType == 'select'):    
@@ -689,89 +695,9 @@ def resolve_device_name_dig (pMAC, pIP):
 
 
 #-------------------------------------------------------------------------------
-# DNS record (Pholus/Name resolution) cleanup methods
+# DNS record (Name resolution) cleanup methods
 #-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-# Disclaimer - I'm interfacing with a script I didn't write (pholus3.py) so it's possible I'm missing types of answers
-# it's also possible the pholus3.py script can be adjusted to provide a better output to interface with it
-# Hit me with a PR if you know how! :)
-def resolve_device_name_pholus (pMAC, pIP, allRes, nameNotFound, match_IP = False):
-    
-    pholusMatchesIndexes = []
-
-    result = nameNotFound
-
-    # Collect all Pholus entries  with matching MAC and of type Answer
-    index = 0
-    for result in allRes:
-        #  limiting entries used for name resolution to the ones containing the current IP (v4 only)
-        if ((match_IP and result["IP_v4_or_v6"] == pIP ) or ( result["MAC"] == pMAC )) and result["Record_Type"] == "Answer" and '._googlezone' not in result["Value"]:
-            # found entries with a matching MAC address, let's collect indexes             
-            pholusMatchesIndexes.append(index)
-
-        index += 1
-
-    # return if nothing found
-    if len(pholusMatchesIndexes) == 0:
-        return nameNotFound   
-
-    # we have some entries let's try to select the most useful one
-    # Do I need to pre-order allRes to have the most valuable onse on the top?
-
-    for i in pholusMatchesIndexes:
-        if not checkIPV4(allRes[i]['IP_v4_or_v6']):
-            continue
-
-        value = allRes[i]["Value"]
-
-        # airplay matches contain a lot of information
-        # Matches for example:
-        # Brand Tv (50)._airplay._tcp.local. TXT Class:32769 "acl=0 deviceid=66:66:66:66:66:66 features=0x77777,0x38BCB46 rsf=0x3 fv=p20.T-FFFFFF-03.1 flags=0x204 model=XXXX manufacturer=Brand serialNumber=XXXXXXXXXXX protovers=1.1 srcvers=777.77.77 pi=FF:FF:FF:FF:FF:FF psi=00000000-0000-0000-0000-FFFFFFFFFF gid=00000000-0000-0000-0000-FFFFFFFFFF gcgl=0 pk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        if '._airplay._tcp.local. TXT Class:32769' in value:
-            return cleanDeviceName(value.split('._airplay._tcp.local. TXT Class:32769')[0], match_IP)
-        
-        # second best - contains airplay
-        # Matches for example:
-        # _airplay._tcp.local. PTR Class:IN "Brand Tv (50)._airplay._tcp.local."
-        if '_airplay._tcp.local. PTR Class:IN' in value and ('._googlecast') not in value:
-            return cleanDeviceName(value.split('"')[1], match_IP)    
-
-        # Contains PTR Class:32769
-        # Matches for example:
-        # 3.1.168.192.in-addr.arpa. PTR Class:32769 "MyPc.local."
-        if 'PTR Class:32769' in value:
-            return cleanDeviceName(value.split('"')[1], match_IP)
-
-        # Contains AAAA Class:IN
-        # Matches for example:
-        # DESKTOP-SOMEID.local. AAAA Class:IN "fe80::fe80:fe80:fe80:fe80"
-        if 'AAAA Class:IN' in value:
-            return cleanDeviceName(value.split('.local.')[0], match_IP)
-
-        # Contains _googlecast._tcp.local. PTR Class:IN
-        # Matches for example:
-        # _googlecast._tcp.local. PTR Class:IN "Nest-Audio-ff77ff77ff77ff77ff77ff77ff77ff77._googlecast._tcp.local."
-        if '_googlecast._tcp.local. PTR Class:IN' in value and ('Google-Cast-Group') not in value:
-            return cleanDeviceName(value.split('"')[1], match_IP)
-
-        # Contains A Class:32769
-        # Matches for example:
-        # Android.local. A Class:32769 "192.168.1.6"
-        if ' A Class:32769' in value:
-            return cleanDeviceName(value.split(' A Class:32769')[0], match_IP)
-
-        # Contains PTR Class:IN
-        # Matches for example:
-        # _esphomelib._tcp.local. PTR Class:IN "ceiling-light-1._esphomelib._tcp.local."
-        if 'PTR Class:IN' in value and len(value.split('"')) > 1:
-            return cleanDeviceName(value.split('"')[1], match_IP)
-
-    return nameNotFound
-    
-    
-
-#-------------------------------------------------------------------------------
 import dns.resolver
 
 def cleanDeviceName(str, match_IP):
@@ -910,6 +836,42 @@ def extract_ip_addresses(text):
 def generate_random_string(length):
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(length))
+
+
+# Helper function to determine if a MAC address is random
+def is_random_mac(mac):
+    # Check if second character matches "2", "6", "A", "E" (case insensitive)
+    is_random = mac[1].upper() in ["2", "6", "A", "E"]
+
+    # Check against user-defined non-random MAC prefixes
+    if is_random:
+        not_random_prefixes = get_setting_value("UI_NOT_RANDOM_MAC")
+        for prefix in not_random_prefixes:
+            if mac.startswith(prefix):
+                is_random = False
+                break
+    return is_random
+
+# Helper function to calculate number of children
+def get_number_of_children(mac, devices):
+    # Count children by checking devParentMAC for each device
+    return sum(1 for dev in devices if dev.get("devParentMAC", "").strip() == mac.strip())
+
+
+
+# Function to convert IP to a long integer
+def format_ip_long(ip_address):
+    try:
+        # Check if it's an IPv6 address
+        if ':' in ip_address:
+            ip = ipaddress.IPv6Address(ip_address)
+        else:
+            # Assume it's an IPv4 address
+            ip = ipaddress.IPv4Address(ip_address)
+        return int(ip)
+    except ValueError:
+        # Return a default error value if IP is invalid
+        return -1
 
 #-------------------------------------------------------------------------------
 # JSON methods

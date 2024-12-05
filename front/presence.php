@@ -115,50 +115,17 @@
               </div>
               <div class="box-body">
                 <div class="chart">
-                  <script src="lib/AdminLTE/bower_components/chart.js/Chart.js"></script>
-                  <!-- <canvas id="clientsChart" width="800" height="140" class="extratooltipcanvas no-user-select"></canvas> -->
-                  <canvas id="OnlineChart" style="width:100%; height: 150px;  margin-bottom: 15px;"></canvas>
+                  <script src="lib/chart.js/Chart.js"></script>
+                  <!-- presence chart -->
+                  <?php  
+                      require 'php/components/graph_online_history.php';
+                  ?>                  
                 </div>
               </div>
               <!-- /.box-body -->
             </div>
           </div>
       </div>
-
-      <script src="js/graph_online_history.js"></script>
-      <script>
-        $.get('api/table_online_history.json?nocache=' + Date.now(), function(res) {
-              // Extracting data from the JSON response
-              var timeStamps = [];
-              var onlineCounts = [];
-              var downCounts = [];
-              var offlineCounts = [];
-              var archivedCounts = [];
-
-              res.data.forEach(function(entry) {
-                  var dateObj = new Date(entry.Scan_Date);
-                  var formattedTime = dateObj.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
-
-                  timeStamps.push(formattedTime);
-                  onlineCounts.push(entry.Online_Devices);
-                  downCounts.push(entry.Down_Devices);
-                  offlineCounts.push(entry.Offline_Devices);
-                  archivedCounts.push(entry.Archived_Devices);
-              });
-
-              // Call your presenceOverTime function after data is ready
-              presenceOverTime(
-                  timeStamps,
-                  onlineCounts,
-                  offlineCounts,
-                  archivedCounts,
-                  downCounts
-              );
-          }).fail(function() {
-              // Handle any errors in fetching the data
-              console.error('Error fetching online history data.');
-          });
-      </script>
   
       <!-- /.row -->
 
@@ -212,11 +179,11 @@
 
 <!-- ----------------------------------------------------------------------- -->
 <!-- fullCalendar -->
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/fullcalendar/dist/fullcalendar.min.css">
-  <link rel="stylesheet" href="lib/AdminLTE/bower_components/fullcalendar/dist/fullcalendar.print.min.css" media="print">
-  <script src="lib/AdminLTE/bower_components/moment/moment.js"></script>
-  <script src="lib/AdminLTE/bower_components/fullcalendar/dist/fullcalendar.min.js"></script>
-  <script src="lib/AdminLTE/bower_components/fullcalendar/dist/locale-all.js"></script>
+  <link rel="stylesheet" href="lib/fullcalendar/fullcalendar.min.css">
+  <link rel="stylesheet" href="lib/fullcalendar/fullcalendar.print.min.css" media="print">
+  <script src="lib/moment/moment.js"></script>
+  <script src="lib/fullcalendar/fullcalendar.min.js"></script>
+  <script src="lib/fullcalendar/locale-all.js"></script>
 
 <!-- fullCalendar Scheduler -->
   <link href="lib/fullcalendar-scheduler/scheduler.min.css" rel="stylesheet">

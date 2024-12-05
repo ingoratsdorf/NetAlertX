@@ -27,8 +27,84 @@ vendorsPathNewest   = '/usr/share/arp-scan/ieee-oui_all_filtered.txt'
 #===============================================================================
 # SQL queries
 #===============================================================================
-sql_devices_all = """select rowid, * from Devices"""
+sql_devices_all = """
+                    SELECT 
+                        rowid,
+                        IFNULL(devMac, '') AS devMac,
+                        IFNULL(devName, '') AS devName,
+                        IFNULL(devOwner, '') AS devOwner,
+                        IFNULL(devType, '') AS devType,
+                        IFNULL(devVendor, '') AS devVendor,
+                        IFNULL(devFavorite, '') AS devFavorite,
+                        IFNULL(devGroup, '') AS devGroup,
+                        IFNULL(devComments, '') AS devComments,
+                        IFNULL(devFirstConnection, '') AS devFirstConnection,
+                        IFNULL(devLastConnection, '') AS devLastConnection,
+                        IFNULL(devLastIP, '') AS devLastIP,
+                        IFNULL(devStaticIP, '') AS devStaticIP,
+                        IFNULL(devScan, '') AS devScan,
+                        IFNULL(devLogEvents, '') AS devLogEvents,
+                        IFNULL(devAlertEvents, '') AS devAlertEvents,
+                        IFNULL(devAlertDown, '') AS devAlertDown,
+                        IFNULL(devSkipRepeated, '') AS devSkipRepeated,
+                        IFNULL(devLastNotification, '') AS devLastNotification,
+                        IFNULL(devPresentLastScan, '') AS devPresentLastScan,
+                        IFNULL(devIsNew, '') AS devIsNew,
+                        IFNULL(devLocation, '') AS devLocation,
+                        IFNULL(devIsArchived, '') AS devIsArchived,
+                        IFNULL(devParentMAC, '') AS devParentMAC,
+                        IFNULL(devParentPort, '') AS devParentPort,
+                        IFNULL(devIcon, '') AS devIcon,
+                        IFNULL(devGUID, '') AS devGUID,
+                        IFNULL(devSite, '') AS devSite,
+                        IFNULL(devSSID, '') AS devSSID,
+                        IFNULL(devSyncHubNode, '') AS devSyncHubNode,
+                        IFNULL(devSourcePlugin, '') AS devSourcePlugin,
+                        CASE 
+                            WHEN devIsNew = 1 THEN 'New'
+                            WHEN devPresentLastScan = 1 THEN 'On-line'
+                            WHEN devPresentLastScan = 0 AND devAlertDown != 0 THEN 'Down'
+                            WHEN devIsArchived = 1 THEN 'Archived'
+                            WHEN devPresentLastScan = 0 THEN 'Off-line'
+                            ELSE 'Unknown status'
+                        END AS devStatus
+                    FROM Devices
+                    """
+
 sql_appevents = """select * from AppEvents"""
+# The below query calculates counts of devices in various categories: 
+#  (connected/online, offline, down, new, archived), 
+#  as well as a combined count for devices that match any status listed in the UI_MY_DEVICES setting
+sql_devices_tiles = """
+                        WITH Statuses AS (
+                            SELECT setValue
+                            FROM Settings
+                            WHERE setKey = 'UI_MY_DEVICES'
+                        ),
+                        MyDevicesFilter AS (
+                            SELECT
+                                -- Build a dynamic filter for devices matching any status in UI_MY_DEVICES
+                                devPresentLastScan, devAlertDown, devIsNew, devIsArchived
+                            FROM Devices
+                            WHERE
+                                (instr((SELECT setValue FROM Statuses), 'online') > 0 AND devPresentLastScan = 1) OR
+                                (instr((SELECT setValue FROM Statuses), 'offline') > 0 AND devPresentLastScan = 0) OR
+                                (instr((SELECT setValue FROM Statuses), 'down') > 0 AND devPresentLastScan = 0 AND devAlertDown = 1) OR
+                                (instr((SELECT setValue FROM Statuses), 'new') > 0 AND devIsNew = 1) OR
+                                (instr((SELECT setValue FROM Statuses), 'archived') > 0 AND devIsArchived = 1)
+                        )
+                        SELECT
+                            -- Counts for each individual status
+                            (SELECT COUNT(*) FROM Devices WHERE devPresentLastScan = 1) AS connected,
+                            (SELECT COUNT(*) FROM Devices WHERE devPresentLastScan = 0) AS offline,
+                            (SELECT COUNT(*) FROM Devices WHERE devPresentLastScan = 0 AND devAlertDown = 1) AS down,
+                            (SELECT COUNT(*) FROM Devices WHERE devIsNew = 1) AS new,
+                            (SELECT COUNT(*) FROM Devices WHERE devIsArchived = 1) AS archived,
+                            (SELECT COUNT(*) FROM Devices WHERE devFavorite = 1) AS favorites,
+                            -- My Devices count
+                            (SELECT COUNT(*) FROM MyDevicesFilter) AS my_devices
+                        FROM Statuses; 
+                    """
 sql_devices_stats =  """SELECT Online_Devices as online, Down_Devices as down, All_Devices as 'all', Archived_Devices as archived, 
                         (select count(*) from Devices a where devIsNew = 1 ) as new, 
                         (select count(*) from Devices a where devName = '(unknown)' or devName = '(name not found)' ) as unknown 

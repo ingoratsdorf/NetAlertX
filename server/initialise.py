@@ -17,7 +17,7 @@ from logger import mylog
 from api import update_api
 from scheduler import schedule_class
 from plugin import print_plugin_info, run_plugin_scripts
-from plugin_utils import get_plugins_configs, get_plugin_setting_obj
+from plugin_utils import get_plugins_configs, get_plugin_setting_obj, get_set_value_for_init
 from notification import write_notification
 
 #===============================================================================
@@ -48,7 +48,10 @@ def ccd(key, default, config_dir, name, inputtype, options, group, events=None, 
     # Single quotes might break SQL queries, replacing them
     if inputtype == 'text':
         result = result.replace('\'', "{s-quote}")
-       
+
+    # Add to config_dir if overridden by environment
+    if overriddenByEnv == 1:
+        config_dir[key] = result       
 
     # Create the tuples
     sql_safe_tuple = (key, name, desc, str(inputtype), options, str(result), group, str(events), overriddenByEnv)
@@ -192,7 +195,7 @@ def importConfigs (db, all_plugins):
 
     plugin_indexes_to_remove = []
     all_plugins_prefixes     = [] # to init the LOADED_PLUGINS setting with correct options
-    loaded_plugins_prefixes  = [] # to init the LOADED_PLUGINS setting with correct initially seelcted values
+    loaded_plugins_prefixes  = [] # to init the LOADED_PLUGINS setting with correct initially selected values
 
     #  handle plugins
     index = 0
@@ -212,21 +215,10 @@ def importConfigs (db, all_plugins):
         # ...or based on if is already enabled, or if the default configuration loads the plugin (RUN function != disabled )   
 
         # get default plugin run value
-        plugin_run = ''
-        setting_obj = get_plugin_setting_obj(plugin, "RUN")
-
-        if setting_obj is not None:
-            set_type = setting_obj.get('type')              # lower case "type" - default json value vs uppper-case "setType" (= from user defined settings)
-            set_value = setting_obj.get('default_value')
-
-            plugin_run = setting_value_to_python_type(set_type, set_value)
-
-        #  get user-defined run value if available
-        if pref + "_RUN" in c_d:
-            plugin_run =  c_d[pref + "_RUN" ]
+        plugin_run = get_set_value_for_init(plugin, c_d, "RUN")
 
         # only include loaded plugins, and the ones that are enabled        
-        if pref in conf.LOADED_PLUGINS or plugin_run != 'disabled' or setting_obj is None or plugin_run is None:
+        if pref in conf.LOADED_PLUGINS or plugin_run != 'disabled' or plugin_run is None:
 
             stringSqlParams = []
             
@@ -253,11 +245,6 @@ def importConfigs (db, all_plugins):
 
                 # Save the user defined value into the object
                 set["value"] = v
-
-                # Setup schedules
-                if setFunction == 'RUN_SCHD':
-                    newSchedule = Cron(v).schedule(start_date=datetime.datetime.now(conf.tz))
-                    conf.mySchedules.append(schedule_class(pref, newSchedule, newSchedule.next(), False))
 
                 # Collect settings related language strings
                 # Creates an entry with key, for example ARPSCAN_CMD_name
@@ -331,6 +318,23 @@ def importConfigs (db, all_plugins):
     else:
         mylog('debug', [f"[Config] File {app_conf_override_path} does not exist."])
   
+    
+    # setup execution schedules AFTER OVERRIDE handling
+
+    mylog('verbose', [f"[Config] c_d {c_d}"])
+
+    for plugin in all_plugins:        
+        # Setup schedules
+        run_val = get_set_value_for_init(plugin, c_d, "RUN")
+        run_sch = get_set_value_for_init(plugin, c_d, "RUN_SCHD")
+
+        # mylog('verbose', [f"[Config] pref {plugin["unique_prefix"]} run_val {run_val} run_sch {run_sch} "])
+
+        if run_val == 'schedule':
+            newSchedule = Cron(run_sch).schedule(start_date=datetime.datetime.now(conf.tz))
+            conf.mySchedules.append(schedule_class(plugin["unique_prefix"], newSchedule, newSchedule.next(), False))
+
+
     # -----------------
     # HANDLE APP was upgraded message - clear cache
     
@@ -352,6 +356,7 @@ def importConfigs (db, all_plugins):
             
             write_notification(f'[Upgrade] : App upgraded 🚀 Please clear the cache: <ol> <li>Click OK below</li>  <li>Clear the browser cache (shift + browser refresh button)</li> <li> Clear app cache with the 🔄 (reload) button in the header</li><li>Go to Settings and click Save</li> </ol> Check out new features and what has changed in the <a href="https://github.com/jokob-sk/NetAlertX/releases" target="_blank">📓 release notes</a>.', 'interrupt', timeNowTZ())
 
+    
 
     # -----------------
     # Initialization finished, update DB and API endpoints

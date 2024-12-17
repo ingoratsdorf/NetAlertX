@@ -107,7 +107,7 @@ function getServerDeviceData() {
       "devSyncHubNode" => "",
       "devSourcePlugin" => "",
       "devStatus" => "Unknown",
-      "devRandomMAC" => false,
+      "devIsRandomMAC" => false,
       "devSessions" => 0,
       "devEvents" => 0,
       "devDownAlerts" => 0,
@@ -135,7 +135,7 @@ function getServerDeviceData() {
   $deviceData['devFirstConnection'] = formatDate ($row['devFirstConnection']); // Date formated
   $deviceData['devLastConnection'] =  formatDate ($row['devLastConnection']);  // Date formated
 
-  $deviceData['devRandomMAC'] = isRandomMAC($mac);
+  $deviceData['devIsRandomMAC'] = isRandomMAC($mac);
 
   // Count Totals
   $condition = ' WHERE eve_MAC="'. $mac .'" AND eve_DateTime >= '. $periodDate;

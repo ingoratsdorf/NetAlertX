@@ -72,10 +72,14 @@
 
             <!-- box-header -->
             <div class="box-header">
-              <div class=" col-md-10 ">
+              <div class=" col-md-9 ">
                 <h3 id="tableDevicesTitle" class="box-title text-gray "></h3>  
               </div>    
-              <div  class=" col-md-2 "><a href="deviceDetails.php?mac=new"><i title="Add new dummy device" class="fa fa-square-plus"></i> <?= lang('Gen_create_new_device');?></a></div>
+              <div  class="dummyDevice col-md-3 ">
+                <span>
+                  <a href="deviceDetails.php?mac=new"><i title="<?= lang('Gen_create_new_device');?>" class="fa fa-square-plus"></i> <?= lang('Gen_create_new_device');?></a>
+                </span>
+              </div>
             </div>
 
             <!-- table -->
@@ -199,26 +203,31 @@ function getDevicesTotals() {
 
   // Fetch data via AJAX
   $.ajax({
-    url: '/api/table_devices_tiles.json?nocache=' + Date.now(),
-    type: "GET",
-    dataType: "json",
-    success: function(response) {
-      if (response && response.data) {
-        resultJSON = response.data[0]; // Assuming the structure {"data": [ ... ]}
-        
-        // Save the result to cache
-        setCache("getDevicesTotals", JSON.stringify(resultJSON));
+      url: '/php/server/query_json.php',
+      type: "GET",
+      dataType: "json",
+      data: {
+          file: 'table_devices_tiles.json', // Pass the file parameter
+          nocache: Date.now() // Prevent caching with a timestamp
+      },
+      success: function(response) {
+          if (response && response.data) {
+              resultJSON = response.data[0]; // Assuming the structure {"data": [ ... ]}
+              
+              // Save the result to cache
+              setCache("getDevicesTotals", JSON.stringify(resultJSON));
 
-        // Process the fetched data
-        processDeviceTotals(resultJSON);
-      } else {
-        console.error("Invalid response format from API");
+              // Process the fetched data
+              processDeviceTotals(resultJSON);
+          } else {
+              console.error("Invalid response format from API");
+          }
+      },
+      error: function(xhr, status, error) {
+          console.error("Failed to fetch devices data:", error);
       }
-    },
-    error: function(xhr, status, error) {
-      console.error("Failed to fetch devices data:", error);
-    }
   });
+
   
 }
 
@@ -561,9 +570,11 @@ function initializeDatatable (status) {
 
     'columnDefs'   : [
       {visible:   false,         targets: tableColumnHide },      
-      {className: 'text-center', targets: [mapIndx(3), mapIndx(4), mapIndx(9), mapIndx(10), mapIndx(15), mapIndx(18)] },      
+      {className: 'text-center', targets: [mapIndx(4), mapIndx(9), mapIndx(10), mapIndx(15), mapIndx(18)] },      
+      {className: 'iconColumn text-center',  targets: [mapIndx(3)]},      
       {width:     '80px',        targets: [mapIndx(6), mapIndx(7), mapIndx(15)] },      
-      {width:     '30px',        targets: [mapIndx(10), mapIndx(13), mapIndx(18)] },      
+      {width:     '85px',        targets: [mapIndx(9)] },      
+      {width:     '30px',        targets: [mapIndx(3), mapIndx(10), mapIndx(13), mapIndx(18)] },      
       {orderData: [mapIndx(12)],          targets: mapIndx(8) },
 
       // Device Name
@@ -620,9 +631,11 @@ function initializeDatatable (status) {
                             <a href="http://${cellData}" class="pointer" target="_blank">
                                 ${cellData}
                             </a>
-                            <a href="https://${cellData}" class="pointer" target="_blank">
+                            <span class="alignRight">
+                              <a href="https://${cellData}" class="pointer" target="_blank">
                                 <i class="fa fa-lock "></i>
-                            </a>
+                              </a>
+                            <span>
                           <span>`);
             } else {
               $(td).html ('');
@@ -742,6 +755,19 @@ function initializeDatatable (status) {
             
           });
 
+          // search only after idle
+          var typingTimer;  // Timer identifier
+          var debounceTime = 500;  // Delay in milliseconds
+
+          $('input[aria-controls="tableDevices"]').off().on('keyup', function () {
+              clearTimeout(typingTimer);  // Clear the previous timer
+              var searchValue = this.value;
+
+              typingTimer = setTimeout(function () {
+                  $('#tableDevices').DataTable().search(searchValue).draw();  // Trigger the search after delay
+              }, debounceTime);
+          });
+
           
           hideSpinner();
           
@@ -760,7 +786,7 @@ function handleLoadingDialog(needsReload = false)
   // console.log('needsReload:');
   // console.log(needsReload); 
 
-  $.get('log/execution_queue.log?nocache=' + Date.now(), function(data) {     
+  $.get('/php/server/query_logs.php?file=execution_queue.log&nocache=' + Date.now(), function(data) {     
 
     if(data.includes("update_api|devices"))
     {       

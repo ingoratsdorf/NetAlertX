@@ -55,10 +55,10 @@ docker run -d --rm --network=host \
 | :------------- | :------------- | :-------------| 
 | ✅ | `:/app/config` | Folder which will contain the `app.conf` & `devices.csv` ([read about devices.csv](https://github.com/jokob-sk/NetAlertX/blob/main/docs/DEVICES_BULK_EDITING.md)) files (see below for details).  | 
 | ✅ | `:/app/db` | Folder which will contain the `app.db` file  | 
-| | `:/app/front/log` |  Logs folder useful for debugging if you have issues setting up the container  | 
+| | `:/app/log` |  Logs folder useful for debugging if you have issues setting up the container  | 
 | | `:/etc/pihole/pihole-FTL.db` |  PiHole's `pihole-FTL.db` database file. Required if you want to use PiHole DB mapping.  | 
 | | `:/etc/pihole/dhcp.leases` |  PiHole's `dhcp.leases` file. Required if you want to use PiHole `dhcp.leases` file. This has to be matched with a corresponding `DHCPLSS_paths_to_check` setting entry (the path in the container must contain `pihole`)| 
-| | `:/app/front/api` |  A simple [API endpoint](https://github.com/jokob-sk/NetAlertX/blob/main/docs/API.md) containing static (but regularly updated) json and other files.   | 
+| | `:/app/api` |  A simple [API endpoint](https://github.com/jokob-sk/NetAlertX/blob/main/docs/API.md) containing static (but regularly updated) json and other files.   | 
 | | `:/app/front/plugins/<plugin>/ignore_plugin` | Map a file `ignore_plugin` to ignore a plugin. Plugins can be soft-disabled via settings. More in the [Plugin docs](https://github.com/jokob-sk/NetAlertX/blob/main/front/plugins/README.md).  | 
 | | `:/etc/resolv.conf` | Use a custom `resolv.conf` file for [better name resolution](https://github.com/jokob-sk/NetAlertX/blob/main/docs/REVERSE_DNS.md).  | 
 
@@ -129,7 +129,7 @@ services:
       - local/path/config:/app/config
       - local/path/db:/app/db      
       # (optional) useful for debugging if you have issues setting up the container
-      - local/path/logs:/app/front/log
+      - local/path/logs:/app/log
     environment:
       - TZ=Europe/Berlin      
       - PORT=20211
@@ -178,7 +178,7 @@ services:
       - ${APP_DATA_LOCATION}/netalertx/config:/app/config
       - ${APP_DATA_LOCATION}/netalertx/db/:/app/db/      
       # (optional) useful for debugging if you have issues setting up the container
-      - ${LOGS_LOCATION}:/app/front/log
+      - ${LOGS_LOCATION}:/app/log
     environment:
       - TZ=${TZ}      
       - PORT=${PORT}

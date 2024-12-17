@@ -42,6 +42,11 @@ h5
     cursor: help;
 }
 
+.alignRight
+{
+    text-align: end;
+}
+
 /* -----------------------------------------------------------------------------
    Text Classes
 ----------------------------------------------------------------------------- */
@@ -1260,6 +1265,11 @@ input[readonly] {
     display: flex;
 }
 
+.iconColumn
+{
+    max-height: 25px;
+}
+
 .iconPreviewSelector svg
 {
     width:40px;
@@ -1276,6 +1286,26 @@ input[readonly] {
     min-width: 40px;
 }
 
+
+.dummyDevice 
+{
+    text-align: end;
+}
+
+#tableDevices .fab
+{
+    font-size: 1.2em;
+}
+
+#tableDevices .fa
+{
+    font-size: 1.0em;
+}
+
+#tableDevices tbody tr
+{
+    height: 1.5em;
+}
 
 .info-icon-nav
 {   

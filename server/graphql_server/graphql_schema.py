@@ -14,10 +14,12 @@ from helper import is_random_mac, get_number_of_children, format_ip_long, get_se
 # Define a base URL with the user's home directory
 folder = apiPath 
 
+# --- DEVICES --- 
 # Pagination and Sorting Input Types
 class SortOptionsInput(InputObjectType):
     field = String()
     order = String()
+
 
 class PageQueryOptionsInput(InputObjectType):
     page = Int()
@@ -25,6 +27,7 @@ class PageQueryOptionsInput(InputObjectType):
     sort = List(SortOptionsInput)
     search = String()
     status = String()
+
 
 # Device ObjectType
 class Device(ObjectType):
@@ -70,8 +73,30 @@ class DeviceResult(ObjectType):
     devices = List(Device)
     count = Int()
 
+
+# --- SETTINGS --- 
+
+# Setting ObjectType
+class Setting(ObjectType):
+    setKey = String()
+    setName = String()
+    setDescription = String()
+    setType = String()
+    setOptions = String()
+    setGroup = String()
+    setValue = String()
+    setEvents = String()
+    setOverriddenByEnv = Boolean()
+
+
+class SettingResult(ObjectType):
+    settings = List(Setting)
+    count = Int()
+
 # Define Query Type with Pagination Support
 class Query(ObjectType):
+
+    # --- DEVICES ---
     devices = Field(DeviceResult, options=PageQueryOptionsInput())
 
     def resolve_devices(self, info, options=None):
@@ -90,8 +115,7 @@ class Query(ObjectType):
             device["devParentChildrenCount"] = get_number_of_children(device["devMac"], devices_data)
             device["devIpLong"] = format_ip_long(device.get("devLastIP", ""))
 
-        total_count = len(devices_data)
-
+        
         mylog('none', f'[graphql_schema] devices_data: {devices_data}')
 
 
@@ -136,14 +160,7 @@ class Query(ObjectType):
                 elif status == "offline":
                     devices_data = [device for device in devices_data if device["devPresentLastScan"] == 0]
 
-            # sorting
-            if options.sort:
-                for sort_option in options.sort:
-                    devices_data = sorted(
-                        devices_data,
-                        key=lambda x: mixed_type_sort_key(x.get(sort_option.field)),
-                        reverse=(sort_option.order.lower() == "desc")
-                    )
+            
 
             # Filter data if a search term is provided
             if options.search:
@@ -164,6 +181,18 @@ class Query(ObjectType):
                     )
                 ]
 
+            # sorting
+            if options.sort:
+                for sort_option in options.sort:
+                    devices_data = sorted(
+                        devices_data,
+                        key=lambda x: mixed_type_sort_key(x.get(sort_option.field)),
+                        reverse=(sort_option.order.lower() == "desc")
+                    )
+
+            # capture total count after all the filtering and searching 
+            total_count = len(devices_data)
+
             # Then apply pagination
             if options.page and options.limit:
                 start = (options.page - 1) * options.limit
@@ -175,6 +204,28 @@ class Query(ObjectType):
 
         return DeviceResult(devices=devices, count=total_count)
 
+    # --- SETTINGS --- 
+    settings = Field(SettingResult)   
+
+    def resolve_settings(root, info):
+
+        try:
+            with open(folder + 'table_settings.json', 'r') as f:
+                settings_data = json.load(f)["data"]
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            mylog('none', f'[graphql_schema] Error loading settings data: {e}')
+            return SettingResult(settings=[], count=0)
+
+
+        mylog('none', f'[graphql_schema] settings_data: {settings_data}')
+
+        # # Convert to Setting objects
+        settings = [Setting(**setting) for setting in settings_data]
+
+        return SettingResult(settings=settings, count=len(settings))
+
+
+        
 # helps sorting inconsistent dataset mixed integers and strings
 def mixed_type_sort_key(value):
     if value is None or value == "":

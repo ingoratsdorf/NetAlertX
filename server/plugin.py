@@ -16,6 +16,7 @@ from helper import timeNowTZ,  updateState, get_file_content, write_file, get_se
 from api import update_api
 from plugin_utils import logEventStatusCounts, get_plugin_string, get_plugin_setting_obj, print_plugin_info, list_to_csv, combine_plugin_objects, resolve_wildcards_arr, handle_empty, custom_plugin_decoder, decode_and_rename_files
 from notification import Notification_obj, write_notification
+from execution_log import ExecutionLog
 
 
 #-------------------------------------------------------------------------------
@@ -147,7 +148,7 @@ def run_plugin_scripts(db, all_plugins, runType, pluginsState = plugins_state())
 
 
 # Function to run a plugin command
-def run_plugin(command, set_RUN_TIMEOUT):
+def run_plugin(command, set_RUN_TIMEOUT, plugin):
     try:
         return subprocess.check_output(command, universal_newlines=True, stderr=subprocess.STDOUT, timeout=set_RUN_TIMEOUT)
     except subprocess.CalledProcessError as e:
@@ -224,7 +225,7 @@ def execute_plugin(db, all_plugins, plugin, pluginsState = plugins_state() ):
 
         # Using ThreadPoolExecutor to handle concurrent subprocesses
         with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(run_plugin, command, set_RUN_TIMEOUT)]  # Submit the command as a future
+            futures = [executor.submit(run_plugin, command, set_RUN_TIMEOUT, plugin)]  # Submit the command as a future
 
             for future in as_completed(futures):
                 output = future.result()  # Get the output or error
@@ -235,8 +236,8 @@ def execute_plugin(db, all_plugins, plugin, pluginsState = plugins_state() ):
         newLines = []
 
         # Create the file path
-        file_dir = os.path.join(pluginsPath, plugin["code_name"])
-        file_prefix = 'last_result'
+        file_dir = logPath + '/plugins'
+        file_prefix = f'last_result.{plugin["unique_prefix"]}'
 
         # Decode files, rename them, and get the list of files, this will return all files starting with the prefix, even if they are not encoded
         files_to_process = decode_and_rename_files(file_dir, file_prefix)
@@ -255,7 +256,7 @@ def execute_plugin(db, all_plugins, plugin, pluginsState = plugins_state() ):
                 # cleanup - select only lines containing a separator to filter out unnecessary data
                 newLines = list(filter(lambda x: '|' in x, newLines))    
 
-                # Store e.g. Node_1 from last_result.encoded.Node_1.1.log
+                # Store e.g. Node_1 from last_result.<prefix>.encoded.Node_1.1.log
                 tmp_SyncHubNodeName = ''
                 if len(filename.split('.')) > 3:
                     tmp_SyncHubNodeName = filename.split('.')[2]   
@@ -840,54 +841,52 @@ class plugin_object_class:
 # Handling of  user initialized front-end events
 #===============================================================================
 def check_and_run_user_event(db, all_plugins, pluginsState):
-    # Check if the log file exists
-    logFile = os.path.join(logPath, "execution_queue.log")
+    """
+    Process user events from the execution queue log file and notify the user about executed events.
+    """
+    execution_log = ExecutionLog()
 
-    # Track if not an API event and list of executed events
-    show_events_completed = False
+    # Track whether to show notification for executed events
     executed_events = []
 
-    if not os.path.exists(logFile):
-        return pluginsState
-
-    with open(logFile, "r") as file:
-        lines = file.readlines()
-
-    remaining_lines = []
+    # Read the log file to get the lines
+    lines = execution_log.read_log()
+    if not lines:
+        return pluginsState  # Exit early if the log file is empty
 
     for line in lines:
-        # Split the line by '|', and take the third and fourth columns (indices 2 and 3)
+        # Extract event name and parameters from the log line
         columns = line.strip().split('|')[2:4]
 
         event, param = "", ""
         if len(columns) == 2:
             event, param = columns
-
+        
+        # Process each event type
         if event == 'test':
-            show_events_completed = True
             pluginsState = handle_test(param, db, all_plugins, pluginsState)
             executed_events.append(f"test with param {param}")
+            execution_log.finalize_event("test")
         elif event == 'run':
-            show_events_completed = True
             pluginsState = handle_run(param, db, all_plugins, pluginsState)
             executed_events.append(f"run with param {param}")
+            execution_log.finalize_event("run")               
         elif event == 'update_api':
-            # Update API endpoints
-            update_api(db, all_plugins, False, param.split(','))
-            executed_events.append(f"update_api with param {param}")
+            # async handling
+            update_api(db, all_plugins, False, param.split(','), True)
+            
         else:
-            remaining_lines.append(line)
+            mylog('minimal', ['[check_and_run_user_event] WARNING: Unhandled event in execution queue: ', event, ' | ', param])
+            execution_log.finalize_event(event)  # Finalize unknown events to remove them       
 
-    # Rewrite the log file with remaining lines
-    with open(logFile, "w") as file:
-        file.writelines(remaining_lines)
-
-    # Only show pop-up if not an API event
-    if show_events_completed:
+    # Notify user about executed events (if applicable)
+    if len(executed_events) > 0 and executed_events:
         executed_events_message = ', '.join(executed_events)
-        write_notification(f'[Ad-hoc events] Events executed: {executed_events_message}', 'interrupt', timeNowTZ())
+        mylog('minimal', ['[check_and_run_user_event] INFO: Executed events: ', executed_events_message])
+        write_notification(f"[Ad-hoc events] Events executed: {executed_events_message}", "interrupt", timeNowTZ())
 
     return pluginsState
+
 
 
 #-------------------------------------------------------------------------------

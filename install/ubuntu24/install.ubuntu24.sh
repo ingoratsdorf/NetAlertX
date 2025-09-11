@@ -14,6 +14,7 @@ echo "---------------------------------------------------------"
 
 # Set environment variables
 INSTALL_DIR=/app  # Specify the installation directory here
+INSTALLER_DIR=$INSTALL_DIR/install/ubuntu24
 
 # Check if script is run as root
 if [[ $EUID -ne 0 ]]; then
@@ -36,10 +37,12 @@ apt-get install -y git
 if [ -d "$INSTALL_DIR" ]; then
   echo "The installation directory exists. Removing it to ensure a clean install."
   echo "Are you sure you want to continue? This will delete all existing files in $INSTALL_DIR."
+  echo "This will include ALL YOUR SETTINGS AND DATABASE! (if there are any)"
+  echo
   echo "Type:"
-  echo " - 'install' to continue"
-  echo " - 'update' to just update from GIT"
-  echo " - 'start' to do nothing, leave install as-is"
+  echo " - 'install' to continue and DELETE ALL!"
+  echo " - 'update' to just update from GIT (keeps your db and settings)"
+  echo " - 'start' to do nothing, leave install as-is (just run the start script)"
   if [ "$1" == "install" ] || [ "$1" == "update" ] || [ "$1" == "start" ]; then
     confirmation=$1
   else
@@ -52,9 +55,9 @@ if [ -d "$INSTALL_DIR" ]; then
 
       # Stop nginx if running
       if command -v systemctl >/dev/null 2>&1 && systemctl list-units --type=service | grep -q nginx; then
-      systemctl stop nginx 2>/dev/null
+        systemctl stop nginx 2>/dev/null
       elif command -v service >/dev/null 2>&1; then
-      service nginx stop 2>/dev/null
+        service nginx stop 2>/dev/null
       fi
 
       # Kill running NetAlertX server processes in this INSTALL_DIR
@@ -80,7 +83,7 @@ if [ -d "$INSTALL_DIR" ]; then
   elif [ "$confirmation" == "update" ]; then
     echo "Updating the existing installation..."
     service nginx stop 2>/dev/null
-   pkill -f "python ${INSTALL_DIR}/server" 2>/dev/null
+    pkill -f "python ${INSTALL_DIR}/server" 2>/dev/null
     cd "$INSTALL_DIR" || { echo "Failed to change directory to $INSTALL_DIR"; exit 1; }
     git pull
   elif [ "$confirmation" == "start" ]; then
@@ -101,5 +104,5 @@ fi
 # Start NetAlertX
 
 # This is where we setup the virtual environment and install dependencies
-cd "$INSTALL_DIR/install/ubuntu" || { echo "Failed to change directory to $INSTALL_DIR/install/ubuntu"; exit 1; }
-"$INSTALL_DIR/install/ubuntu/start.ubuntu.sh"
+cd "$INSTALLER_DIR" || { echo "Failed to change directory to $INSTALLER_DIR"; exit 1; }
+"$INSTALLER_DIR/start.ubuntu24.sh"

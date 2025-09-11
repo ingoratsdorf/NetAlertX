@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo "---------------------------------------------------------"
-echo "[INSTALL]              Run install_dependencies.debian.sh"
+echo "[INSTALL]            Run install_dependencies.debian12.sh"
 echo "---------------------------------------------------------"
 
 # ❗ IMPORTANT - if you modify this file modify the root Dockerfile as well ❗
@@ -31,4 +31,3 @@ update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 #  install packages thru pip3
 pip3 install openwrt-luci-rpc asusrouter asyncio aiohttp graphene flask flask-cors unifi-sm-api tplink-omada-client wakeonlan pycryptodome requests paho-mqtt scapy cron-converter pytz json2table dhcp-leases pyunifi speedtest-cli chardet python-nmap dnspython librouteros yattag git+https://github.com/foreign-sub/aiofreepybox.git 
-

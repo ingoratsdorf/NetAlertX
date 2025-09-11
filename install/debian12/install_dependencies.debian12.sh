@@ -23,7 +23,7 @@ sudo apt-get install nginx nginx-core mtr php-fpm php8.2-fpm php-cli php8.2 php8
 sudo phpenmod -v 8.2 sqlite3 
 
 # setup virtual python environment so we can use pip3 to install packages
-apt-get install python3.11-venv -y
+apt-get install python3-venv -y
 python3 -m venv myenv
 source myenv/bin/activate
 

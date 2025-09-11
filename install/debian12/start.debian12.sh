@@ -3,7 +3,7 @@
 echo "---------------------------------------------------------"
 echo "[INSTALL]                           Run start.debian12.sh"
 echo "---------------------------------------------------------"
-
+echo
 
 INSTALL_DIR=/app  # Specify the installation directory here
 
@@ -51,15 +51,11 @@ elif [ -f /etc/nginx/sites-enabled/default ]; then
 fi
 
 # Clear existing directories and files
-if [ -d $WEB_UI_DIR ]; then
-  echo "Removing existing NetAlertX web-UI"
-  sudo rm -R $WEB_UI_DIR
-fi
+echo "Removing existing NetAlertX web-UI"
+sudo rm -R $WEB_UI_DIR
 
-if [ -f $NGINX_CONFIG_FILE ]; then
-  echo "Removing existing NetAlertX NGINX config"
-  sudo rm $NGINX_CONFIG_FILE
-fi
+echo "Removing existing NetAlertX NGINX config"
+sudo rm $NGINX_CONFIG_FILE
 
 # create symbolic link to the  install directory
 ln -s $INSTALL_PATH/front $WEB_UI_DIR
@@ -108,7 +104,6 @@ echo "[INSTALL] Fixing file permissions"
 chown root:www-data "${INSTALL_DIR}"/api/user_notifications.json
 
 echo "[INSTALL] Fixing WEB_UI_DIR: ${WEB_UI_DIR}"
-
 chmod -R a+rwx $WEB_UI_DIR
 
 echo "[INSTALL] Fixing INSTALL_DIR: ${INSTALL_DIR}"

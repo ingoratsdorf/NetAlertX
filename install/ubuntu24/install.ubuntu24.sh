@@ -76,10 +76,6 @@ if [ -d "$INSTALL_DIR" ]; then
       echo "INSTALL_DIR is not set, is root, or is invalid. Aborting for safety."
       exit 1
     fi
-    else
-      echo "INSTALL_DIR is not set or is root. Aborting for safety."
-      exit 1
-    fi
   elif [ "$confirmation" == "update" ]; then
     echo "Updating the existing installation..."
     service nginx stop 2>/dev/null
@@ -105,4 +101,5 @@ fi
 
 # This is where we setup the virtual environment and install dependencies
 cd "$INSTALLER_DIR" || { echo "Failed to change directory to $INSTALLER_DIR"; exit 1; }
+chmod +x "$INSTALLER_DIR/start.ubuntu24.sh"
 "$INSTALLER_DIR/start.ubuntu24.sh"

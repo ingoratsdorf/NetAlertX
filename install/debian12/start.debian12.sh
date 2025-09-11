@@ -10,7 +10,7 @@ INSTALL_DIR=/app  # Specify the installation directory here
 # DO NOT CHANGE ANYTHING BELOW THIS LINE!
 CONF_FILE=app.conf
 DB_FILE=app.db
-NGINX_CONF_FILE=netalertx.debian12.conf
+NGINX_CONF_FILE=netalertx.conf
 WEB_UI_DIR=/var/www/html/netalertx
 NGINX_CONFIG_FILE=/etc/nginx/conf.d/$NGINX_CONF_FILE
 OUI_FILE="/usr/share/arp-scan/ieee-oui.txt" # Define the path to ieee-oui.txt and ieee-iab.txt
@@ -64,7 +64,7 @@ fi
 # create symbolic link to the  install directory
 ln -s $INSTALL_PATH/front $WEB_UI_DIR
 # create symbolic link to NGINX configuration coming with NetAlertX
-sudo ln -s "${INSTALL_PATH}/install/debian12/netalertx.debian12.conf" /etc/nginx/conf.d/$NGINX_CONF_FILE
+sudo ln -s "${INSTALL_PATH}/install/debian12/netalertx.conf" /etc/nginx/conf.d/$NGINX_CONF_FILE
 
 # Use user-supplied port if set
 if [ -n "${PORT}" ]; then

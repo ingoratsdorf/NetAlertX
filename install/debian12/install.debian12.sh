@@ -35,4 +35,5 @@ if [ ! -f $INSTALL_DIR/front/buildtimestamp.txt ]; then
 fi
 
 # Start NetAlertX
+chmod +x "$INSTALL_DIR/install/debian12/start.debian12.sh"
 "$INSTALL_DIR/install/debian12/start.debian12.sh"

@@ -4,10 +4,12 @@ echo "---------------------------------------------------------"
 echo "[INSTALL]                           Run start.debian12.sh"
 echo "---------------------------------------------------------"
 echo
+echo "This script will set up and start NetAlertX on your Debian12 system."
 
 INSTALL_DIR=/app  # Specify the installation directory here
 
 # DO NOT CHANGE ANYTHING BELOW THIS LINE!
+INSTALLER_DIR=$INSTALL_DIR/install/ubuntu24
 CONF_FILE=app.conf
 DB_FILE=app.db
 NGINX_CONF_FILE=netalertx.conf
@@ -34,12 +36,26 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# Run setup scripts
-echo "[INSTALL] Run setup scripts"
+
+
+echo "---------------------------------------------------------"
+echo "[INSTALL] Installing dependencies"
+echo "---------------------------------------------------------"
+echo
+
 
 "${INSTALL_PATH}/install/debian12/install_dependencies.debian12.sh" # if modifying this file transfer the changes into the root Dockerfile.debian as well!
 
-echo "[INSTALL] Setup NGINX"
+
+echo "---------------------------------------------------------"
+echo "[INSTALL] Installing NGINX and setting up the web server"
+echo "---------------------------------------------------------"
+echo
+echo "[INSTALL] Stopping any NGINX web server"
+
+service nginx stop 2>/dev/null
+pkill -f "python ${INSTALL_DIR}/server" 2>/dev/null
+echo "[INSTALL] Updating the existing installation..."
 
 # Remove default NGINX site if it is symlinked, or backup it otherwise
 if [ -L /etc/nginx/sites-enabled/default ] ; then
@@ -51,11 +67,13 @@ elif [ -f /etc/nginx/sites-enabled/default ]; then
 fi
 
 # Clear existing directories and files
-echo "Removing existing NetAlertX web-UI"
-sudo rm -R $WEB_UI_DIR
+if [ -d $WEB_UI_DIR ]; then
+  echo "[INSTALL] Removing existing NetAlertX web-UI"
+  rm -R $WEB_UI_DIR
+fi
 
-echo "Removing existing NetAlertX NGINX config"
-sudo rm $NGINX_CONFIG_FILE
+echo "[INSTALL] Removing existing NetAlertX NGINX config"
+rm "$NGINX_CONFIG_FILE" 2>/dev/null || true
 
 # create symbolic link to the  install directory
 ln -s $INSTALL_PATH/front $WEB_UI_DIR
@@ -146,6 +164,7 @@ fi
 
 # start PHP
 /etc/init.d/php8.2-fpm start
+nginx -t || { echo "[INSTALL] nginx config test failed"; exit 1; }
 /etc/init.d/nginx start
 
 # Start Nginx and your application to start at boot (if needed)

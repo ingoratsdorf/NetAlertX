@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo "---------------------------------------------------------"
-echo "[INSTALL]                             Run start.debian.sh"
+echo "[INSTALL]                           Run start.debian12.sh"
 echo "---------------------------------------------------------"
 
 
@@ -10,7 +10,7 @@ INSTALL_DIR=/app  # Specify the installation directory here
 # DO NOT CHANGE ANYTHING BELOW THIS LINE!
 CONF_FILE=app.conf
 DB_FILE=app.db
-NGINX_CONF_FILE=netalertx.debian.conf
+NGINX_CONF_FILE=netalertx.debian12.conf
 WEB_UI_DIR=/var/www/html/netalertx
 NGINX_CONFIG_FILE=/etc/nginx/conf.d/$NGINX_CONF_FILE
 OUI_FILE="/usr/share/arp-scan/ieee-oui.txt" # Define the path to ieee-oui.txt and ieee-iab.txt
@@ -37,7 +37,7 @@ fi
 # Run setup scripts
 echo "[INSTALL] Run setup scripts"
 
-"${INSTALL_PATH}/install/install_dependencies.debian.sh" # if modifying this file transfer the changes into the root Dockerfile.debian as well!
+"${INSTALL_PATH}/install/debian12/install_dependencies.debian12.sh" # if modifying this file transfer the changes into the root Dockerfile.debian as well!
 
 echo "[INSTALL] Setup NGINX"
 
@@ -64,7 +64,7 @@ fi
 # create symbolic link to the  install directory
 ln -s $INSTALL_PATH/front $WEB_UI_DIR
 # create symbolic link to NGINX configuration coming with NetAlertX
-sudo ln -s "${INSTALL_PATH}/install/netalertx.debian.conf" /etc/nginx/conf.d/$NGINX_CONF_FILE
+sudo ln -s "${INSTALL_PATH}/install/debian12/netalertx.debian12.conf" /etc/nginx/conf.d/$NGINX_CONF_FILE
 
 # Use user-supplied port if set
 if [ -n "${PORT}" ]; then

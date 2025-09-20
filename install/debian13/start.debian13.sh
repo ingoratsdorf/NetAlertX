@@ -121,7 +121,7 @@ fi
 
 # Change php version
 echo "[INSTALL] Setting PHP version to ${PHPVERSION}"
-sed -i 's#unix:/run/php/php8.3-fpm.sock#unix:/run/php/php'"${PHPVERSION}"'-fpm.sock#ig' $NGINX_CONFIG_FILE
+sed -i 's#unix:/run/php/php8.4-fpm.sock#unix:/run/php/php'"${PHPVERSION}"'-fpm.sock#ig' $NGINX_CONFIG_FILE
 
 # Run the hardware vendors update at least once
 echo "[INSTALL] Run the hardware vendors update"

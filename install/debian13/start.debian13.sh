@@ -20,7 +20,7 @@ NGINX_CONFIG_FILE=/etc/nginx/conf.d/$NGINX_CONF_FILE
 OUI_FILE="/usr/share/arp-scan/ieee-oui.txt" # Define the path to ieee-oui.txt and ieee-iab.txt
 INSTALL_PATH=$INSTALL_DIR
 FILEDB=$INSTALL_PATH/db/$DB_FILE
-PHPVERSION="8.3"
+PHPVERSION="8.4"
 # DO NOT CHANGE ANYTHING ABOVE THIS LINE!
 
 # if custom variables not set we do not need to do anything
@@ -55,7 +55,8 @@ apt-get install -y \
     python3 python3-dev iproute2 nmap python3-pip zip usbutils traceroute nbtscan avahi-daemon avahi-utils build-essential
 
 # alternate dependencies
-apt-get install nginx php${PHPVERSION} php${PHPVERSION}-sqlite3 php php-cgi php-fpm php-sqlite3 php-curl php-fpm php${PHPVERSION}-fpm php-cli -y
+# nginx-core install nginx and nginx-common as dependencies
+apt-get install nginx-core php${PHPVERSION} php${PHPVERSION}-sqlite3 php php-cgi php-fpm php-sqlite3 php-curl php-fpm php${PHPVERSION}-fpm php-cli -y
 phpenmod -v ${PHPVERSION} sqlite3
 
 update-alternatives --install /usr/bin/python python /usr/bin/python3 10

@@ -3,8 +3,8 @@ Description=NetAlertX - Network, presence scanner and alert framework
 ConditionPathExists=/app/server
 
 [Service]
-EnvironmentFile=-/app/.env
-ExecStart=/opt/netalertx-python/bin/python $INSTALL_PATH/server/
+EnvironmentFile=/app/.env
+ExecStart=/opt/netalertx-python/bin/python /app/server/
 Restart=on-failure
 Type=simple
 

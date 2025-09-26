@@ -1,12 +1,11 @@
 [Unit]
 Description=NetAlertX - Network, presence scanner and alert framework
-ConditionPathExists=/app/server
 
 [Service]
-Environment="VIRTUAL_ENV=/opt/netalertx-python" "PATH=$VIRTUAL_ENV/bin:$PATH"
-EnvironmentFile=/app/.env
-WorkingDirectory=/app/server
-ExecStart=/opt/netalertx-python/bin/python3 /app/server
+EnvironmentFile=/etc/default/netalertx
+PassEnvironment=INSTALL_SYSTEM_NAME INSTALLER_DIR INSTALL_DIR PHPVERSION VIRTUAL_ENV PATH
+WorkingDirectory=${INSTALL_DIR}/server
+ExecStart=/opt/netalertx-python/bin/python3 ${INSTALL_DIR}/server
 Restart=on-failure
 Type=simple
 

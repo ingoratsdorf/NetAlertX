@@ -311,10 +311,10 @@ nginx -t || { echo "[INSTALL] nginx config test failed"; exit 1; }
 systemctl start nginx || { echo "[INSTALL] Failed to start nginx"; exit 1; }
 
 
-
 echo "---------------------------------------------------------"
 echo "[INSTALL] Installation complete"
 echo "---------------------------------------------------------"
+echo
 
 # Export all variables to /etc/default/netalertx file for use by the systemd service
 env_vars=( "INSTALL_SYSTEM_NAME" "INSTALLER_DIR" "INSTALL_DIR" "PHPVERSION" "VIRTUAL_ENV" "PATH" )
@@ -323,10 +323,15 @@ for var in "${env_vars[@]}"; do
   echo "$var=${!var}" >> "/etc/default/netalertx"
 done
 
+
+echo "---------------------------------------------------------"
+echo "[INSTALL] Starting netalertx service"
+echo "---------------------------------------------------------"
+echo
+
 # Create systemd service
-cp ./netalertx.service /etc/systemd/system/netalertx.service || { echo "[INSTALL] Failed to copy systemd service file"; exit 1; }
+cp "${SCRIPT_DIR}/netalertx.service" "/etc/systemd/system/netalertx.service" || { echo "[INSTALL] Failed to copy systemd service file"; exit 1; }
 systemctl daemon-reload || { echo "[INSTALL] Failed to reload systemd daemon"; exit 1; }
 systemctl enable netalertx || { echo "[INSTALL] Failed to enable NetAlertX service"; exit 1; }
 systemctl start netalertx || { echo "[INSTALL] Failed to start NetAlertX service"; exit 1; }
 echo "[INSTALL] 🚀 Starting app - navigate to your <server IP>:${PORT}"
-systemctl status netalertx

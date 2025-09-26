@@ -317,8 +317,8 @@ echo "[INSTALL] Installation complete"
 echo "---------------------------------------------------------"
 
 # Export all variables to a .env file for use by the systemd service
-env_vars=( "INSTALL_SYSTEM_NAME" "INSTALLER_DIR" "INSTALL_DIR" "PHPVERSION" )
-echo "" > /app/.env
+env_vars=( "INSTALL_SYSTEM_NAME" "INSTALLER_DIR" "INSTALL_DIR" "PHPVERSION" "VIRTUAL_ENV" "PATH" )
+printf "" > /app/.env
 for var in "${env_vars[@]}"; do
   echo "$var=${!var}" >> /app/.env
 done

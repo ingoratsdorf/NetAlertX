@@ -331,6 +331,10 @@ echo
 
 # Create systemd service
 cp "${SCRIPT_DIR}/netalertx.service" "/etc/systemd/system/netalertx.service" || { echo "[INSTALL] Failed to copy systemd service file"; exit 1; }
+# Adjust our path to the correct python in virtualenv
+echo "[INSTALL] Setting up systemd unit"
+sed -i 's|ExecStart=/usr/bin/python3|ExecStart='"${VIRTUAL_ENV}"'/bin/python3|ig' "/etc/systemd/system/netalertx.service" || { echo "[INSTALL] Failed to setup systemd service file"; exit 1; }
+
 systemctl daemon-reload || { echo "[INSTALL] Failed to reload systemd daemon"; exit 1; }
 systemctl enable netalertx || { echo "[INSTALL] Failed to enable NetAlertX service"; exit 1; }
 systemctl start netalertx || { echo "[INSTALL] Failed to start NetAlertX service"; exit 1; }

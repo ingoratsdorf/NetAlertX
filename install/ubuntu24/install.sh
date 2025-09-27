@@ -69,19 +69,6 @@ phpenmod -v ${PHPVERSION} sqlite3
 
 
 echo "---------------------------------------------------------"
-echo "[INSTALL] Setting up Python environment"
-echo "---------------------------------------------------------"
-echo
-update-alternatives --install /usr/bin/python python /usr/bin/python3 10
-python3 -m venv "${VENV_DIR}"
-source "${VENV_DIR}/bin/activate"
-
-pip3 install -r "$SCRIPT_DIR/requirements.txt" || {  
-  echo "[INSTALL] Failed to install Python dependencies"  
-  exit 1  
-}  
-
-echo "---------------------------------------------------------"
 echo "[INSTALL] Stopping any NGINX web server and components"
 echo "          (There may be errors stopping services, that's OK)"
 echo "---------------------------------------------------------"
@@ -153,6 +140,19 @@ else
   git clone https://github.com/jokob-sk/NetAlertX "${INSTALL_DIR}/"
 fi
 
+
+echo "---------------------------------------------------------"
+echo "[INSTALL] Setting up Python environment"
+echo "---------------------------------------------------------"
+echo
+update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+python3 -m venv "${VENV_DIR}"
+source "${VENV_DIR}/bin/activate"
+
+pip3 install -r "$SCRIPT_DIR/requirements.txt" || {  
+  echo "[INSTALL] Failed to install Python dependencies"  
+  exit 1  
+}  
 
 
 # We now should have all dependencies and files in place

@@ -25,6 +25,10 @@ SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILEDB=${INSTALL_DIR}/db/${DB_FILE}
 PHPVERSION="8.3"
 VENV_DIR="/opt/netalertx-python"
+GITHUB_REPO="https://github.com/jokob-sk/NetAlertX"
+SYSTEMD_UNIT_FILE="/etc/systemd/system/netalertx.service"
+SYSTEMD_UNIT_DEFAULTS="/etc/default/netalertx"
+ALWAYS_FRESH_INSTALL=false  # Set to true to always reset /config and /db on each install
 # DO NOT CHANGE ANYTHING ABOVE THIS LINE!
 
 
@@ -116,7 +120,7 @@ if [ -d "${INSTALL_DIR}" ]; then
       rm -rf -- "${INSTALL_DIR}"/* "${INSTALL_DIR}"/.[!.]* "${INSTALL_DIR}"/..?* 2>/dev/null
 
       # Re-clone repository
-      git clone https://github.com/jokob-sk/NetAlertX "${INSTALL_DIR}/"
+      git clone "${GITHUB_REPO}" "${INSTALL_DIR}/"
     else
       echo "[INSTALL] INSTALL_DIR is not set, is root, or is invalid. Aborting for safety."
       exit 1
@@ -145,11 +149,11 @@ echo "---------------------------------------------------------"
 echo "[INSTALL] Setting up Python environment"
 echo "---------------------------------------------------------"
 echo
-update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+# update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 python3 -m venv "${VENV_DIR}"
 source "${VENV_DIR}/bin/activate"
 
-pip3 install -r "$SCRIPT_DIR/requirements.txt" || {  
+pip3 install -r "${INSTALLER_DIR}/requirements.txt" || {  
   echo "[INSTALL] Failed to install Python dependencies"  
   exit 1  
 }  
@@ -318,9 +322,9 @@ echo
 
 # Export all variables to /etc/default/netalertx file for use by the systemd service
 env_vars=( "INSTALL_SYSTEM_NAME" "INSTALLER_DIR" "INSTALL_DIR" "PHPVERSION" "VIRTUAL_ENV" "PATH" )
-printf "" > "/etc/default/netalertx"
+printf "" > "${SYSTEMD_UNIT_DEFAULTS}"
 for var in "${env_vars[@]}"; do
-  echo "$var=${!var}" >> "/etc/default/netalertx"
+  echo "$var=${!var}" >> "${SYSTEMD_UNIT_DEFAULTS}"
 done
 
 
@@ -330,10 +334,10 @@ echo "---------------------------------------------------------"
 echo
 
 # Create systemd service
-cp "${SCRIPT_DIR}/netalertx.service" "/etc/systemd/system/netalertx.service" || { echo "[INSTALL] Failed to copy systemd service file"; exit 1; }
+cp "${INSTALLER_DIR}/netalertx.service" "${SYSTEMD_UNIT_FILE}" || { echo "[INSTALL] Failed to copy systemd service file"; exit 1; }
 # Adjust our path to the correct python in virtualenv
 echo "[INSTALL] Setting up systemd unit"
-sed -i 's|ExecStart=/usr/bin/python3|ExecStart='"${VIRTUAL_ENV}"'/bin/python3|ig' "/etc/systemd/system/netalertx.service" || { echo "[INSTALL] Failed to setup systemd service file"; exit 1; }
+sed -i 's|ExecStart=/usr/bin/python3|ExecStart='"${VIRTUAL_ENV}"'/bin/python3|ig' "/${SYSTEMD_UNIT_FILE}" || { echo "[INSTALL] Failed to setup systemd service file"; exit 1; }
 
 systemctl daemon-reload || { echo "[INSTALL] Failed to reload systemd daemon"; exit 1; }
 systemctl enable netalertx || { echo "[INSTALL] Failed to enable NetAlertX service"; exit 1; }

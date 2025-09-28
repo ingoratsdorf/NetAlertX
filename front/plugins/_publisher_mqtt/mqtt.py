@@ -65,7 +65,6 @@ def main():
     db.open()
 
     mqtt_start(db)
-    mqtt_client.disconnect()
 
     plugin_objects.write_result_file()
 
@@ -432,6 +431,7 @@ def mqtt_start(db):
     global mqtt_client, mqtt_connected_to_broker
 
     if not mqtt_connected_to_broker:
+        mqtt_connected_to_broker = True
         mqtt_client = mqtt_create_client()
 
 
